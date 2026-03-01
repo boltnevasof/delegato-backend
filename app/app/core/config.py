@@ -10,10 +10,10 @@ class Settings(BaseSettings):
     )
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://delegato:delegato@localhost:5432/delegato"
+    DATABASE_URL: str = "postgresql+asyncpg://delegato:delegato@postgres:5432/delegato"
 
     # Redis
-    REDIS_URL: str = "redis://localhost:6379"
+    REDIS_URL: str = "redis://redis:6379"
 
     # JWT
     JWT_SECRET_KEY: str = "change-me-to-random-secret"
