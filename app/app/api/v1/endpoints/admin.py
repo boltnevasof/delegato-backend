@@ -3,7 +3,7 @@ import uuid
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import check_ip_whitelist, get_admin_user
+from app.api.deps import check_ip_whitelist, get_admin_user, manage_session
 from app.api.v1.schemas.admin import (
     AdminAgentListItem,
     AdminAgentListResponse,
@@ -18,7 +18,6 @@ from app.api.v1.schemas.admin import (
 from app.api.v1.schemas.server import ServerLogItem, ServerLogListResponse
 from app.core.constants import CustomRequestStatus, ServerLogLevel, ServerStatus
 from app.core.container import Container
-from app.models.user import User
 from app.repositories.agent import AgentRepository
 from app.repositories.custom_request import CustomTariffRequestRepository
 from app.repositories.server import ServerRepository
@@ -39,6 +38,7 @@ router = APIRouter(
     description="Постраничный список всех пользователей платформы с поиском по email/имени.",
 )
 @inject
+@manage_session
 async def list_users(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
@@ -66,6 +66,7 @@ async def list_users(
     description="Постраничный список всех серверов с возможностью фильтрации по статусу (provisioning, active, error и т.д.).",
 )
 @inject
+@manage_session
 async def list_servers(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
@@ -93,6 +94,7 @@ async def list_servers(
     description="Сводная статистика по серверам: общее количество, активные, в процессе провижининга, с ошибками, остановленные.",
 )
 @inject
+@manage_session
 async def get_server_stats(
     server_repo: ServerRepository = Depends(Provide[Container.server_repository]),
 ) -> AdminServerStats:
@@ -113,6 +115,7 @@ async def get_server_stats(
     description="Постраничные логи конкретного сервера. Фильтрация по уровню: info, warning, error.",
 )
 @inject
+@manage_session
 async def get_server_logs(
     server_id: uuid.UUID,
     page: int = Query(1, ge=1),
@@ -143,6 +146,7 @@ async def get_server_logs(
     description="Постраничный список всех AI-агентов платформы с информацией о статусе и шаге онбординга.",
 )
 @inject
+@manage_session
 async def list_agents(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
@@ -168,6 +172,7 @@ async def list_agents(
     description="Постраничный список заявок на индивидуальный тариф с фильтрацией по статусу (new, contacted, closed).",
 )
 @inject
+@manage_session
 async def list_custom_requests(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),

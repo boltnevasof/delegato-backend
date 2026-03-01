@@ -1,7 +1,7 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, manage_session
 from app.api.v1.schemas.agent import (
     AgentDetailResponse,
     AgentMdUpdateRequest,
@@ -36,6 +36,7 @@ router = APIRouter(prefix="/agents", tags=["agents"])
     description="Возвращает полную информацию об AI-агенте текущего пользователя: статус, SOUL.md, навыки, инструменты, каналы и сервер.",
 )
 @inject
+@manage_session
 async def get_agent(
     current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(Provide[Container.agent_service]),
@@ -62,6 +63,7 @@ async def get_agent(
     description="Принимает текстовое описание бизнеса и запускает фоновую AI-задачу для генерации SOUL.md и AGENT.md. Возвращает task_id для отслеживания.",
 )
 @inject
+@manage_session
 async def onboarding_describe(
     body: OnboardingDescribeRequest,
     current_user: User = Depends(get_current_user),
@@ -78,6 +80,7 @@ async def onboarding_describe(
     description="Пропускает шаг генерации SOUL.md из описания бизнеса. Пользователь сможет заполнить SOUL.md вручную позже.",
 )
 @inject
+@manage_session
 async def onboarding_skip_describe(
     current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(Provide[Container.agent_service]),
@@ -92,7 +95,10 @@ async def onboarding_skip_describe(
     summary="Статус фоновой задачи",
     description="Проверяет статус асинхронной задачи (AI-генерация, enhance). Возвращает pending / completed / failed.",
 )
-async def get_task_status(task_id: str) -> AsyncTaskStatusResponse:
+@manage_session
+async def get_task_status(
+    task_id: str,
+) -> AsyncTaskStatusResponse:
     result = await broker.result_backend.get_result(task_id)
     if result is None:
         return AsyncTaskStatusResponse(task_id=task_id, status="pending")
@@ -119,6 +125,7 @@ async def get_task_status(task_id: str) -> AsyncTaskStatusResponse:
     description="Подключает канал связи (Telegram) к агенту на этапе онбординга. Автоматически переводит онбординг на следующий шаг.",
 )
 @inject
+@manage_session
 async def onboarding_connect_channel(
     body: OnboardingConnectChannelRequest,
     current_user: User = Depends(get_current_user),
@@ -142,6 +149,7 @@ async def onboarding_connect_channel(
     description="Активирует выбранные навыки (по ID или пресету) для агента на этапе онбординга.",
 )
 @inject
+@manage_session
 async def onboarding_select_skills(
     body: OnboardingSelectSkillsRequest,
     current_user: User = Depends(get_current_user),
@@ -165,6 +173,7 @@ async def onboarding_select_skills(
     description="Завершает онбординг агента и запускает провижининг сервера. Агент переходит в статус configuring.",
 )
 @inject
+@manage_session
 async def onboarding_complete(
     current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(Provide[Container.agent_service]),
@@ -180,6 +189,7 @@ async def onboarding_complete(
     description="Заменяет содержимое SOUL.md агента. SOUL.md определяет личность, тон и поведение AI-агента.",
 )
 @inject
+@manage_session
 async def update_soul_md(
     body: SoulMdUpdateRequest,
     current_user: User = Depends(get_current_user),
@@ -196,6 +206,7 @@ async def update_soul_md(
     description="Заменяет содержимое AGENT.md агента. AGENT.md определяет инструкции, бизнес-правила и контекст работы агента.",
 )
 @inject
+@manage_session
 async def update_agent_md(
     body: AgentMdUpdateRequest,
     current_user: User = Depends(get_current_user),
@@ -213,6 +224,7 @@ async def update_agent_md(
     description="Запускает фоновую AI-задачу для улучшения SOUL.md или AGENT.md. Возвращает task_id для отслеживания результата.",
 )
 @inject
+@manage_session
 async def enhance_content(
     body: EnhanceRequest,
     current_user: User = Depends(get_current_user),

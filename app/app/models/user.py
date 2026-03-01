@@ -1,11 +1,11 @@
 import uuid
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.constants import AuthProvider, UserRole
-from app.db.base import Base, FullTimestampMixin, TimestampMixin, UUIDMixin
+from app.db.base import Base, EnumValue, FullTimestampMixin, TimestampMixin, UUIDMixin
 
 
 class User(Base, UUIDMixin, FullTimestampMixin):
@@ -14,7 +14,7 @@ class User(Base, UUIDMixin, FullTimestampMixin):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role", create_constraint=True),
+        EnumValue(UserRole, name="user_role", create_constraint=True),
         nullable=False,
         server_default=UserRole.USER.value,
     )
@@ -32,7 +32,7 @@ class UserAuthMethod(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True,
     )
     provider: Mapped[AuthProvider] = mapped_column(
-        Enum(AuthProvider, name="auth_provider", create_constraint=True), nullable=False,
+        EnumValue(AuthProvider, name="auth_provider", create_constraint=True), nullable=False,
     )
     provider_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)

@@ -1,15 +1,16 @@
 import uuid
 
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ServerLogLevel
+from app.db.engine import session_context
 from app.models.server_log import ServerLog
 
 
 class ServerLogRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    @property
+    def _session(self):
+        return session_context.get()
 
     async def create(
         self,

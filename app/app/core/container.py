@@ -1,7 +1,7 @@
 from dependency_injector import containers, providers
 
 from app.core.config import settings
-from app.db.engine import get_async_session
+from app.db.engine import create_session
 
 # Repositories
 from app.repositories.agent import AgentRepository
@@ -60,56 +60,39 @@ class Container(containers.DeclarativeContainer):
             "app.api.v1.endpoints.channels",
             "app.api.v1.endpoints.subscriptions",
             "app.api.v1.endpoints.admin",
+            "app.api.deps",
             "app.main",
         ],
     )
 
-    # --- Session ---
-    db_session = providers.Resource(get_async_session)
+    # --- Session factory: каждый вызов Container.session() = новая сессия ---
+    session = providers.Factory(create_session)
 
-    # --- Repositories ---
-    user_repository = providers.Factory(UserRepository, session=db_session)
-    auth_method_repository = providers.Factory(
-        UserAuthMethodRepository, session=db_session,
-    )
-    otp_repository = providers.Factory(OTPCodeRepository, session=db_session)
-    refresh_token_repository = providers.Factory(
-        RefreshTokenRepository, session=db_session,
-    )
-    tariff_repository = providers.Factory(TariffRepository, session=db_session)
-    subscription_repository = providers.Factory(
-        SubscriptionRepository, session=db_session,
-    )
-    agent_repository = providers.Factory(AgentRepository, session=db_session)
-    payment_repository = providers.Factory(PaymentRepository, session=db_session)
-    custom_request_repository = providers.Factory(
-        CustomTariffRequestRepository, session=db_session,
-    )
-    server_repository = providers.Factory(ServerRepository, session=db_session)
-    server_log_repository = providers.Factory(ServerLogRepository, session=db_session)
-    provisioning_repository = providers.Factory(
-        ProvisioningTaskRepository, session=db_session,
-    )
-    skill_catalog_repository = providers.Factory(
-        SkillCatalogRepository, session=db_session,
-    )
-    agent_skill_repository = providers.Factory(
-        AgentSkillRepository, session=db_session,
-    )
-    agent_channel_repository = providers.Factory(
-        AgentChannelRepository, session=db_session,
-    )
-    tool_catalog_repository = providers.Factory(
-        ToolCatalogRepository, session=db_session,
-    )
-    agent_tool_repository = providers.Factory(AgentToolRepository, session=db_session)
+    # --- Repositories (singletons — session из ContextVar в каждом методе) ---
+    user_repository = providers.Singleton(UserRepository)
+    auth_method_repository = providers.Singleton(UserAuthMethodRepository)
+    otp_repository = providers.Singleton(OTPCodeRepository)
+    refresh_token_repository = providers.Singleton(RefreshTokenRepository)
+    tariff_repository = providers.Singleton(TariffRepository)
+    subscription_repository = providers.Singleton(SubscriptionRepository)
+    agent_repository = providers.Singleton(AgentRepository)
+    payment_repository = providers.Singleton(PaymentRepository)
+    custom_request_repository = providers.Singleton(CustomTariffRequestRepository)
+    server_repository = providers.Singleton(ServerRepository)
+    server_log_repository = providers.Singleton(ServerLogRepository)
+    provisioning_repository = providers.Singleton(ProvisioningTaskRepository)
+    skill_catalog_repository = providers.Singleton(SkillCatalogRepository)
+    agent_skill_repository = providers.Singleton(AgentSkillRepository)
+    agent_channel_repository = providers.Singleton(AgentChannelRepository)
+    tool_catalog_repository = providers.Singleton(ToolCatalogRepository)
+    agent_tool_repository = providers.Singleton(AgentToolRepository)
 
     # --- External services ---
     email_service = providers.Singleton(UnisenderEmailService)
     payment_gateway = providers.Singleton(_create_payment_gateway)
 
     # --- Services ---
-    auth_service = providers.Factory(
+    auth_service = providers.Singleton(
         AuthService,
         user_repository=user_repository,
         auth_method_repository=auth_method_repository,
@@ -118,7 +101,7 @@ class Container(containers.DeclarativeContainer):
         email_service=email_service,
     )
 
-    user_service = providers.Factory(
+    user_service = providers.Singleton(
         UserService,
         user_repository=user_repository,
         agent_repository=agent_repository,
@@ -126,43 +109,43 @@ class Container(containers.DeclarativeContainer):
         tariff_repository=tariff_repository,
     )
 
-    tariff_service = providers.Factory(
+    tariff_service = providers.Singleton(
         TariffService,
         tariff_repository=tariff_repository,
         custom_request_repository=custom_request_repository,
     )
 
-    subscription_service = providers.Factory(
+    subscription_service = providers.Singleton(
         SubscriptionService,
         subscription_repository=subscription_repository,
         tariff_repository=tariff_repository,
     )
 
-    skill_service = providers.Factory(
+    skill_service = providers.Singleton(
         SkillService,
         skill_catalog_repository=skill_catalog_repository,
         agent_skill_repository=agent_skill_repository,
     )
 
-    channel_service = providers.Factory(
+    channel_service = providers.Singleton(
         ChannelService,
         agent_channel_repository=agent_channel_repository,
     )
 
-    tool_service = providers.Factory(
+    tool_service = providers.Singleton(
         ToolService,
         tool_catalog_repository=tool_catalog_repository,
         agent_tool_repository=agent_tool_repository,
     )
 
-    server_service = providers.Factory(
+    server_service = providers.Singleton(
         ServerService,
         server_repository=server_repository,
         agent_repository=agent_repository,
         server_log_repository=server_log_repository,
     )
 
-    agent_service = providers.Factory(
+    agent_service = providers.Singleton(
         AgentService,
         agent_repository=agent_repository,
         agent_skill_repository=agent_skill_repository,
@@ -172,7 +155,7 @@ class Container(containers.DeclarativeContainer):
         skill_service=skill_service,
     )
 
-    provisioning_service = providers.Factory(
+    provisioning_service = providers.Singleton(
         ProvisioningService,
         server_repository=server_repository,
         server_log_repository=server_log_repository,
@@ -183,7 +166,7 @@ class Container(containers.DeclarativeContainer):
         agent_channel_repository=agent_channel_repository,
     )
 
-    payment_service = providers.Factory(
+    payment_service = providers.Singleton(
         PaymentService,
         payment_repository=payment_repository,
         subscription_repository=subscription_repository,

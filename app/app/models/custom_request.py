@@ -1,11 +1,11 @@
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, String, Text
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import CustomRequestStatus
-from app.db.base import Base, FullTimestampMixin, UUIDMixin
+from app.db.base import Base, EnumValue, FullTimestampMixin, UUIDMixin
 
 
 class CustomTariffRequest(Base, UUIDMixin, FullTimestampMixin):
@@ -17,7 +17,7 @@ class CustomTariffRequest(Base, UUIDMixin, FullTimestampMixin):
     contact_info: Mapped[str] = mapped_column(String(500), nullable=False)
     requirements: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[CustomRequestStatus] = mapped_column(
-        Enum(CustomRequestStatus, name="custom_request_status", create_constraint=True),
+        EnumValue(CustomRequestStatus, name="custom_request_status", create_constraint=True),
         nullable=False,
         server_default=CustomRequestStatus.NEW.value,
     )

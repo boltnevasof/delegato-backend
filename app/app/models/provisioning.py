@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import ProvisioningTaskStatus, ProvisioningTaskType
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, EnumValue, TimestampMixin, UUIDMixin
 
 
 class ProvisioningTask(Base, UUIDMixin, TimestampMixin):
@@ -16,11 +16,11 @@ class ProvisioningTask(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("servers.id", ondelete="CASCADE"), nullable=False, index=True,
     )
     task_type: Mapped[ProvisioningTaskType] = mapped_column(
-        Enum(ProvisioningTaskType, name="provisioning_task_type", create_constraint=True),
+        EnumValue(ProvisioningTaskType, name="provisioning_task_type", create_constraint=True),
         nullable=False,
     )
     status: Mapped[ProvisioningTaskStatus] = mapped_column(
-        Enum(ProvisioningTaskStatus, name="provisioning_task_status", create_constraint=True),
+        EnumValue(ProvisioningTaskStatus, name="provisioning_task_status", create_constraint=True),
         nullable=False,
         server_default=ProvisioningTaskStatus.PENDING.value,
     )

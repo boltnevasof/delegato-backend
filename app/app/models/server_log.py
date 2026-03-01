@@ -1,11 +1,11 @@
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, Index, String, Text
+from sqlalchemy import ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import ServerLogLevel
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, EnumValue, TimestampMixin, UUIDMixin
 
 
 class ServerLog(Base, UUIDMixin, TimestampMixin):
@@ -15,7 +15,7 @@ class ServerLog(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("servers.id", ondelete="CASCADE"), nullable=False,
     )
     level: Mapped[ServerLogLevel] = mapped_column(
-        Enum(ServerLogLevel, name="server_log_level", create_constraint=True),
+        EnumValue(ServerLogLevel, name="server_log_level", create_constraint=True),
         nullable=False,
     )
     stage: Mapped[str] = mapped_column(String(100), nullable=False)

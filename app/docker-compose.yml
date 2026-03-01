@@ -45,6 +45,8 @@ services:
     build: .
     command: taskiq worker app.broker:broker --workers 2
     env_file: .env
+    volumes:
+      - ../infrastructure:/app/infrastructure:ro
     depends_on:
       postgres:
         condition: service_healthy

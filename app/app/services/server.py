@@ -20,6 +20,9 @@ class ServerService:
         self._agent_repo = agent_repository
         self._log_repo = server_log_repository
 
+    async def find_by_agent(self, agent_id: uuid.UUID) -> Server | None:
+        return await self._server_repo.get_by_agent_id(agent_id)
+
     async def create_server(self, agent_id: uuid.UUID) -> Server:
         return await self._server_repo.create(agent_id)
 

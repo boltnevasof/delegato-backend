@@ -11,6 +11,7 @@ from app.repositories.server import ServerRepository
 from app.services.dto.agent import AgentDetailDTO
 from app.services.skill import SkillService
 from app.tasks.ai import enhance_content_task, generate_soul_md_task
+from app.tasks.provisioning import configure_agent
 
 
 class AgentService:
@@ -32,6 +33,12 @@ class AgentService:
 
     async def create_agent(self, user_id: uuid.UUID) -> Agent:
         return await self._repo.create(user_id)
+
+    async def get_or_create_agent(self, user_id: uuid.UUID) -> Agent:
+        agent = await self._repo.get_by_user_id(user_id)
+        if agent is None:
+            agent = await self._repo.create(user_id)
+        return agent
 
     async def get_by_user(self, user_id: uuid.UUID) -> Agent:
         agent = await self._repo.get_by_user_id(user_id)
@@ -105,6 +112,12 @@ class AgentService:
         )
         if agent is None:
             raise NotFound(detail="Agent not found")
+
+        # Push agent config (SOUL.md, skills, tools, channels) to the server
+        server = await self._server_repo.get_by_agent_id(agent_id)
+        if server is not None:
+            await configure_agent.kiq(str(server.id))
+
         return agent
 
     async def update_onboarding_step(self, agent_id: uuid.UUID, step: int) -> None:

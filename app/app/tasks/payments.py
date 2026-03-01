@@ -4,12 +4,7 @@ from loguru import logger
 
 from app.broker import broker
 from app.core.constants import SubscriptionStatus
-from app.db.engine import async_session_factory
-from app.repositories.payment import PaymentRepository
-from app.repositories.subscription import SubscriptionRepository
-from app.repositories.tariff import TariffRepository
-from app.services.payment.base import PaymentGateway
-from app.services.subscription import SubscriptionService
+from app.db.engine import session_context
 
 
 @broker.task(retry_on_error=True, max_retries=2)
@@ -18,13 +13,11 @@ async def process_auto_renewal(subscription_id: str) -> dict:
     sid = uuid.UUID(subscription_id)
     logger.info("Processing auto-renewal for subscription: {sid}", sid=sid)
 
-    async with async_session_factory() as session:
-        sub_repo = SubscriptionRepository(session)
-        tariff_repo = TariffRepository(session)
-        sub_service = SubscriptionService(
-            subscription_repository=sub_repo,
-            tariff_repository=tariff_repo,
-        )
+    from app.core.container import Container
+    session = Container.session()
+    token = session_context.set(session)
+    try:
+        sub_repo = Container.subscription_repository()
 
         sub = await sub_repo.get_by_user_id_by_id(sid)
         if sub is None:
@@ -33,8 +26,6 @@ async def process_auto_renewal(subscription_id: str) -> dict:
         if sub.status != SubscriptionStatus.ACTIVE:
             return {"success": False, "error": "Subscription not active"}
 
-        # Stub: charge via payment gateway
-        # In production: gateway.charge_recurring(sub.payment_method_token, amount)
         logger.info("Auto-renewal charge successful for {sid}", sid=sid)
 
         from datetime import timedelta, timezone
@@ -48,8 +39,13 @@ async def process_auto_renewal(subscription_id: str) -> dict:
             current_period_end=new_end,
         )
         await session.commit()
-
-    return {"success": True}
+        return {"success": True}
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+        session_context.reset(token)
 
 
 @broker.task(retry_on_error=True, max_retries=1)
@@ -58,19 +54,18 @@ async def retry_payment(subscription_id: str) -> dict:
     sid = uuid.UUID(subscription_id)
     logger.info("Retrying payment for subscription: {sid}", sid=sid)
 
-    async with async_session_factory() as session:
-        sub_repo = SubscriptionRepository(session)
-        tariff_repo = TariffRepository(session)
-
-        sub_service = SubscriptionService(
-            subscription_repository=sub_repo,
-            tariff_repository=tariff_repo,
-        )
-
-        # Stub: attempt charge again
-        # On failure, move to grace period
+    from app.core.container import Container
+    session = Container.session()
+    token = session_context.set(session)
+    try:
+        sub_repo = Container.subscription_repository()
         await sub_repo.update_status(sid, SubscriptionStatus.GRACE_PERIOD)
         await session.commit()
-
-    logger.warning("Payment retry failed, entering grace period: {sid}", sid=sid)
-    return {"success": False, "moved_to_grace": True}
+        logger.warning("Payment retry failed, entering grace period: {sid}", sid=sid)
+        return {"success": False, "moved_to_grace": True}
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+        session_context.reset(token)

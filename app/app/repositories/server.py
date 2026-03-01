@@ -1,16 +1,17 @@
 import uuid
 
 from sqlalchemy import func, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ServerStatus
+from app.db.engine import session_context
 from app.models.server import Server
 from app.utils.pagination import paginate
 
 
 class ServerRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    @property
+    def _session(self):
+        return session_context.get()
 
     async def create(self, agent_id: uuid.UUID) -> Server:
         server = Server(agent_id=agent_id)

@@ -4,29 +4,9 @@ from loguru import logger
 
 from app.broker import broker
 from app.core.constants import ProvisioningTaskStatus
-from app.db.engine import async_session_factory
-from app.repositories.agent import AgentRepository
-from app.repositories.agent_channel import AgentChannelRepository
-from app.repositories.agent_skill import AgentSkillRepository
-from app.repositories.agent_tool import AgentToolRepository
-from app.repositories.provisioning import ProvisioningTaskRepository
-from app.repositories.server import ServerRepository
-from app.repositories.server_log import ServerLogRepository
-from app.services.provisioning import ProvisioningService
+from app.db.engine import session_context
 
 ANSIBLE_MAX_RETRIES = 3
-
-
-def _create_provisioning_service(session) -> ProvisioningService:
-    return ProvisioningService(
-        server_repository=ServerRepository(session),
-        server_log_repository=ServerLogRepository(session),
-        provisioning_repository=ProvisioningTaskRepository(session),
-        agent_repository=AgentRepository(session),
-        agent_skill_repository=AgentSkillRepository(session),
-        agent_tool_repository=AgentToolRepository(session),
-        agent_channel_repository=AgentChannelRepository(session),
-    )
 
 
 @broker.task(retry_on_error=True, max_retries=3)
@@ -35,9 +15,12 @@ async def provision_server(server_id: str) -> dict:
     sid = uuid.UUID(server_id)
     logger.info("Starting server provisioning: {server_id}", server_id=server_id)
 
-    async with async_session_factory() as session:
-        service = _create_provisioning_service(session)
-        prov_repo = ProvisioningTaskRepository(session)
+    from app.core.container import Container
+    session = Container.session()
+    token = session_context.set(session)
+    try:
+        service = Container.provisioning_service()
+        prov_repo = Container.provisioning_repository()
 
         tasks = await prov_repo.get_by_server_id(sid)
         task = tasks[0] if tasks else None
@@ -53,7 +36,6 @@ async def provision_server(server_id: str) -> dict:
                 await session.commit()
                 return {"success": False, "error": "Terraform failed"}
 
-            # Ansible with retries — avoid leaving dead servers running
             ansible_success = False
             for attempt in range(1, ANSIBLE_MAX_RETRIES + 1):
                 logger.info(
@@ -72,8 +54,6 @@ async def provision_server(server_id: str) -> dict:
                 await service.mark_error(sid, "Ansible configuration failed after max retries")
                 if task:
                     await prov_repo.update_status(task.id, ProvisioningTaskStatus.FAILED)
-
-                # Destroy the VPS to avoid paying for dead servers
                 logger.warning(
                     "Destroying server {server_id} after {max} failed Ansible attempts",
                     server_id=server_id,
@@ -97,6 +77,12 @@ async def provision_server(server_id: str) -> dict:
                 await prov_repo.update_status(task.id, ProvisioningTaskStatus.FAILED)
             await session.commit()
             raise
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+        session_context.reset(token)
 
 
 @broker.task
@@ -105,12 +91,20 @@ async def configure_agent(server_id: str) -> dict:
     sid = uuid.UUID(server_id)
     logger.info("Starting agent config update: {server_id}", server_id=server_id)
 
-    async with async_session_factory() as session:
-        service = _create_provisioning_service(session)
+    from app.core.container import Container
+    session = Container.session()
+    token = session_context.set(session)
+    try:
+        service = Container.provisioning_service()
         success = await service.run_config_update(sid)
         await session.commit()
-
-    return {"success": success}
+        return {"success": success}
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+        session_context.reset(token)
 
 
 @broker.task
@@ -119,9 +113,17 @@ async def update_agent_config(server_id: str) -> dict:
     sid = uuid.UUID(server_id)
     logger.info("Updating agent config on server: {server_id}", server_id=server_id)
 
-    async with async_session_factory() as session:
-        service = _create_provisioning_service(session)
+    from app.core.container import Container
+    session = Container.session()
+    token = session_context.set(session)
+    try:
+        service = Container.provisioning_service()
         success = await service.run_config_update(sid)
         await session.commit()
-
-    return {"success": success}
+        return {"success": success}
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+        session_context.reset(token)

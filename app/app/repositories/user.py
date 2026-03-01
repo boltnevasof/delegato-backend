@@ -1,15 +1,16 @@
 import uuid
 
 from sqlalchemy import or_, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.engine import session_context
 from app.models.user import User
 from app.utils.pagination import paginate
 
 
 class UserRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    @property
+    def _session(self):
+        return session_context.get()
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
         result = await self._session.execute(select(User).where(User.id == user_id))

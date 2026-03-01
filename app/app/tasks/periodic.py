@@ -5,12 +5,8 @@ from sqlalchemy import select
 
 from app.broker import broker
 from app.core.constants import SubscriptionStatus
-from app.db.engine import async_session_factory
+from app.db.engine import session_context
 from app.models.subscription import Subscription
-from app.repositories.otp import OTPCodeRepository
-from app.repositories.refresh_token import RefreshTokenRepository
-from app.repositories.subscription import SubscriptionRepository
-from app.repositories.tariff import TariffRepository
 from app.services.subscription import SubscriptionService
 
 
@@ -22,7 +18,10 @@ async def check_subscription_renewals() -> dict:
     now = datetime.now(timezone.utc)
     count = 0
 
-    async with async_session_factory() as session:
+    from app.core.container import Container
+    session = Container.session()
+    token = session_context.set(session)
+    try:
         result = await session.execute(
             select(Subscription).where(
                 Subscription.status == SubscriptionStatus.ACTIVE,
@@ -34,6 +33,14 @@ async def check_subscription_renewals() -> dict:
         for sub in due_subs:
             await process_auto_renewal.kiq(str(sub.id))
             count += 1
+
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+        session_context.reset(token)
 
     logger.info("Enqueued {count} subscription renewals", count=count)
     return {"renewals_enqueued": count}
@@ -48,7 +55,10 @@ async def send_renewal_reminders() -> dict:
     threshold = now + timedelta(days=3)
     count = 0
 
-    async with async_session_factory() as session:
+    from app.core.container import Container
+    session = Container.session()
+    token = session_context.set(session)
+    try:
         result = await session.execute(
             select(Subscription).where(
                 Subscription.status == SubscriptionStatus.ACTIVE,
@@ -59,9 +69,16 @@ async def send_renewal_reminders() -> dict:
         expiring = result.scalars().all()
 
         for sub in expiring:
-            # Stub: enqueue notification task
             logger.info("Renewal reminder for subscription {id}", id=sub.id)
             count += 1
+
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+        session_context.reset(token)
 
     logger.info("Sent {count} renewal reminders", count=count)
     return {"reminders_sent": count}
@@ -73,13 +90,11 @@ async def expire_grace_periods() -> dict:
     now = datetime.now(timezone.utc)
     count = 0
 
-    async with async_session_factory() as session:
-        sub_repo = SubscriptionRepository(session)
-        tariff_repo = TariffRepository(session)
-        sub_service = SubscriptionService(
-            subscription_repository=sub_repo,
-            tariff_repository=tariff_repo,
-        )
+    from app.core.container import Container
+    session = Container.session()
+    token = session_context.set(session)
+    try:
+        sub_service: SubscriptionService = Container.subscription_service()
 
         result = await session.execute(
             select(Subscription).where(
@@ -97,6 +112,12 @@ async def expire_grace_periods() -> dict:
             count += 1
 
         await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+        session_context.reset(token)
 
     logger.info("Expired {count} grace period subscriptions", count=count)
     return {"expired": count}
@@ -105,13 +126,22 @@ async def expire_grace_periods() -> dict:
 @broker.task(schedule=[{"cron": "0 */6 * * *"}])
 async def cleanup_expired_tokens() -> dict:
     """Every 6 hours: delete expired OTPs and refresh tokens."""
-    async with async_session_factory() as session:
-        otp_repo = OTPCodeRepository(session)
-        token_repo = RefreshTokenRepository(session)
+    from app.core.container import Container
+    session = Container.session()
+    token = session_context.set(session)
+    try:
+        otp_repo = Container.otp_repository()
+        token_repo = Container.refresh_token_repository()
 
         otp_count = await otp_repo.delete_expired()
         token_count = await token_repo.delete_expired()
         await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+        session_context.reset(token)
 
     logger.info(
         "Cleaned up {otp} OTPs and {tokens} refresh tokens",

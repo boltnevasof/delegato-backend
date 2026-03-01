@@ -1,11 +1,11 @@
 import uuid
 
-from sqlalchemy import Enum, ForeignKey, String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import ServerStatus
-from app.db.base import Base, FullTimestampMixin, UUIDMixin
+from app.db.base import Base, EnumValue, FullTimestampMixin, UUIDMixin
 
 
 class Server(Base, UUIDMixin, FullTimestampMixin):
@@ -15,7 +15,7 @@ class Server(Base, UUIDMixin, FullTimestampMixin):
         UUID(as_uuid=True), ForeignKey("agents.id", ondelete="CASCADE"), unique=True, nullable=False,
     )
     status: Mapped[ServerStatus] = mapped_column(
-        Enum(ServerStatus, name="server_status", create_constraint=True),
+        EnumValue(ServerStatus, name="server_status", create_constraint=True),
         nullable=False,
         server_default=ServerStatus.PROVISIONING.value,
     )

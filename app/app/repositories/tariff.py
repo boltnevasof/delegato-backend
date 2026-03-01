@@ -1,14 +1,15 @@
 import uuid
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.engine import session_context
 from app.models.tariff import TariffPlan
 
 
 class TariffRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    @property
+    def _session(self):
+        return session_context.get()
 
     async def list_active(self) -> list[TariffPlan]:
         result = await self._session.execute(

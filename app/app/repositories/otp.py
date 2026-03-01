@@ -1,14 +1,15 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.engine import session_context
 from app.models.otp import OTPCode
 
 
 class OTPCodeRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    @property
+    def _session(self):
+        return session_context.get()
 
     async def create(self, email: str, code: str, expires_at: datetime) -> OTPCode:
         otp = OTPCode(email=email, code=code, expires_at=expires_at)

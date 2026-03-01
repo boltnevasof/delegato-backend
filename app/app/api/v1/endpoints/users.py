@@ -1,7 +1,7 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, manage_session
 from app.api.v1.schemas.user import UserProfileResponse
 from app.core.container import Container
 from app.models.user import User
@@ -17,6 +17,7 @@ router = APIRouter(prefix="/users", tags=["users"])
     description="Возвращает профиль текущего пользователя: данные аккаунта, методы авторизации, агента и подписку.",
 )
 @inject
+@manage_session
 async def get_profile(
     current_user: User = Depends(get_current_user),
     user_service: UserService = Depends(Provide[Container.user_service]),
