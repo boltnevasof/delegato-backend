@@ -1,0 +1,6 @@
+---
+- name: restart openclaw
+  ansible.builtin.command:
+    cmd: docker compose restart
+    chdir: /opt/openclaw
+  changed_when: true

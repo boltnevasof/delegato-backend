@@ -1,0 +1,10 @@
+---
+- name: Provision Delegato agent server
+  hosts: server
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: base
+    - role: docker
+    - role: openclaw

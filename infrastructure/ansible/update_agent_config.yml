@@ -1,0 +1,8 @@
+---
+- name: Update OpenClaw agent configuration
+  hosts: server
+  become: true
+  gather_facts: false
+
+  roles:
+    - role: openclaw

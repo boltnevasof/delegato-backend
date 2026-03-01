@@ -1,0 +1,46 @@
+import uuid
+
+from sqlalchemy import delete, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.agent_skill import AgentSkill
+
+
+class AgentSkillRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(self, agent_id: uuid.UUID, skill_id: uuid.UUID) -> AgentSkill:
+        agent_skill = AgentSkill(agent_id=agent_id, skill_id=skill_id)
+        self._session.add(agent_skill)
+        await self._session.flush()
+        return agent_skill
+
+    async def get_by_agent_id(self, agent_id: uuid.UUID) -> list[AgentSkill]:
+        result = await self._session.execute(
+            select(AgentSkill).where(AgentSkill.agent_id == agent_id)
+        )
+        return list(result.scalars().all())
+
+    async def get_by_agent_and_skill(
+        self, agent_id: uuid.UUID, skill_id: uuid.UUID,
+    ) -> AgentSkill | None:
+        result = await self._session.execute(
+            select(AgentSkill).where(
+                AgentSkill.agent_id == agent_id,
+                AgentSkill.skill_id == skill_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def update(self, agent_skill_id: uuid.UUID, **kwargs) -> None:
+        await self._session.execute(
+            update(AgentSkill).where(AgentSkill.id == agent_skill_id).values(**kwargs)
+        )
+        await self._session.flush()
+
+    async def delete(self, agent_skill_id: uuid.UUID) -> None:
+        await self._session.execute(
+            delete(AgentSkill).where(AgentSkill.id == agent_skill_id)
+        )
+        await self._session.flush()
