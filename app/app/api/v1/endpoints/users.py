@@ -1,0 +1,34 @@
+from dependency_injector.wiring import Provide, inject
+from fastapi import APIRouter, Depends
+
+from app.api.deps import get_current_user
+from app.api.v1.schemas.user import UserProfileResponse
+from app.core.container import Container
+from app.models.user import User
+from app.services.user import UserService
+
+router = APIRouter(prefix="/users", tags=["users"])
+
+
+@router.get(
+    "/me",
+    response_model=UserProfileResponse,
+    summary="Получить профиль",
+    description="Возвращает профиль текущего пользователя: данные аккаунта, методы авторизации, агента и подписку.",
+)
+@inject
+async def get_profile(
+    current_user: User = Depends(get_current_user),
+    user_service: UserService = Depends(Provide[Container.user_service]),
+) -> UserProfileResponse:
+    profile = await user_service.get_profile(current_user.id)
+    return UserProfileResponse(
+        id=profile.id,
+        email=profile.email,
+        name=profile.name,
+        role=profile.role,
+        auth_methods=profile.auth_methods,
+        created_at=profile.created_at,
+        agent=profile.agent,
+        subscription=profile.subscription,
+    )
