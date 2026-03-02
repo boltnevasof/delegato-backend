@@ -1,15 +1,16 @@
 import uuid
 
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SubscriptionStatus
+from app.db.engine import session_context
 from app.models.subscription import Subscription
 
 
 class SubscriptionRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    @property
+    def _session(self):
+        return session_context.get()
 
     async def create(self, **kwargs) -> Subscription:
         subscription = Subscription(**kwargs)

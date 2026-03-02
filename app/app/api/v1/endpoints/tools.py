@@ -3,7 +3,7 @@ import uuid
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, manage_session
 from app.api.v1.schemas.tool import (
     AddToolRequest,
     AgentToolResponse,
@@ -26,6 +26,7 @@ router = APIRouter(tags=["tools"])
     description="Возвращает список всех доступных инструментов (MCP-серверов, API-интеграций) для подключения к агенту.",
 )
 @inject
+@manage_session
 async def get_tool_catalog(
     current_user: User = Depends(get_current_user),
     tool_service: ToolService = Depends(Provide[Container.tool_service]),
@@ -44,6 +45,7 @@ async def get_tool_catalog(
     description="Подключает указанный инструмент из каталога к AI-агенту текущего пользователя.",
 )
 @inject
+@manage_session
 async def add_tool(
     body: AddToolRequest,
     current_user: User = Depends(get_current_user),
@@ -64,6 +66,7 @@ async def add_tool(
     description="Включает или выключает ранее добавленный инструмент агента без удаления.",
 )
 @inject
+@manage_session
 async def toggle_tool(
     tool_id: uuid.UUID,
     body: ToggleToolRequest,
@@ -85,6 +88,7 @@ async def toggle_tool(
     description="Полностью отключает инструмент от агента. Для повторного использования потребуется добавить заново.",
 )
 @inject
+@manage_session
 async def remove_tool(
     tool_id: uuid.UUID,
     current_user: User = Depends(get_current_user),

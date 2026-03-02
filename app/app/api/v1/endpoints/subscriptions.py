@@ -1,7 +1,7 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, manage_session
 from app.api.v1.schemas.subscription import (
     CancelSubscriptionRequest,
     CancelSubscriptionResponse,
@@ -41,6 +41,7 @@ def _build_sub_response(sub) -> SubscriptionDetailResponse:
     description="Возвращает детали активной подписки пользователя: тариф, период, статус и причину отмены (если есть).",
 )
 @inject
+@manage_session
 async def get_current_subscription(
     current_user: User = Depends(get_current_user),
     subscription_service: SubscriptionService = Depends(
@@ -58,6 +59,7 @@ async def get_current_subscription(
     description="Переключает подписку на другой тарифный план с расчётом пропорциональной доплаты/возврата за оставшийся период.",
 )
 @inject
+@manage_session
 async def change_tariff(
     body: ChangeTariffRequest,
     current_user: User = Depends(get_current_user),
@@ -80,6 +82,7 @@ async def change_tariff(
     description="Отменяет подписку. Доступ сохраняется до конца grace-периода, после чего сервер останавливается.",
 )
 @inject
+@manage_session
 async def cancel_subscription(
     body: CancelSubscriptionRequest,
     current_user: User = Depends(get_current_user),
@@ -102,6 +105,7 @@ async def cancel_subscription(
     description="Возобновляет ранее отменённую подписку, если grace-период ещё не истёк.",
 )
 @inject
+@manage_session
 async def reactivate_subscription(
     current_user: User = Depends(get_current_user),
     subscription_service: SubscriptionService = Depends(

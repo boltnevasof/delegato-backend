@@ -1,7 +1,7 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Request
 
-from app.api.deps import PaginationParams, get_current_user
+from app.api.deps import PaginationParams, get_current_user, manage_session
 from app.api.v1.schemas.common import MessageResponse
 from app.api.v1.schemas.payment import (
     PaymentHistoryItem,
@@ -23,6 +23,7 @@ router = APIRouter(prefix="/payments", tags=["payments"])
     description="Инициирует оплату выбранного тарифа. Возвращает URL платёжной страницы, на которую нужно перенаправить пользователя.",
 )
 @inject
+@manage_session
 async def subscribe(
     body: SubscribeRequest,
     current_user: User = Depends(get_current_user),
@@ -41,6 +42,7 @@ async def subscribe(
     description="Принимает уведомления от платёжного провайдера (TBank / YooKassa). Проверяет подпись и обновляет статус платежа и подписки.",
 )
 @inject
+@manage_session
 async def payment_webhook(
     request: Request,
     payment_service: PaymentService = Depends(Provide[Container.payment_service]),
@@ -61,6 +63,7 @@ async def payment_webhook(
     description="Возвращает постраничный список всех платежей текущего пользователя с суммой, статусом и датой.",
 )
 @inject
+@manage_session
 async def payment_history(
     pagination: PaginationParams = Depends(),
     current_user: User = Depends(get_current_user),

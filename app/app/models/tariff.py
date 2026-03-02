@@ -1,8 +1,8 @@
-from sqlalchemy import Boolean, Enum, Integer, String
+from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import SkillAccessLevel
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, EnumValue, TimestampMixin, UUIDMixin
 
 
 class TariffPlan(Base, UUIDMixin, TimestampMixin):
@@ -14,7 +14,7 @@ class TariffPlan(Base, UUIDMixin, TimestampMixin):
     max_channels: Mapped[int | None] = mapped_column(Integer, nullable=True)
     llm_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     skills_access: Mapped[SkillAccessLevel] = mapped_column(
-        Enum(SkillAccessLevel, name="skill_access_level", create_constraint=True),
+        EnumValue(SkillAccessLevel, name="skill_access_level", create_constraint=True),
         nullable=False,
     )
     is_self_service: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")

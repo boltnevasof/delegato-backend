@@ -26,6 +26,8 @@ RUN apt-get update \
 
 WORKDIR /app
 
+ENV PYTHONPATH=/app
+
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 

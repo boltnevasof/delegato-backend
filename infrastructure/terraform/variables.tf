@@ -4,16 +4,22 @@ variable "twc_token" {
   sensitive   = true
 }
 
-variable "twc_region" {
-  description = "TimeWeb Cloud region"
+variable "availability_zone" {
+  description = "TimeWeb Cloud availability zone (spb-1, msk-1, ams-1, fra-1, etc.)"
   type        = string
-  default     = "nl-1"
+  default     = "ams-1"
 }
 
 variable "twc_ssh_key_id" {
   description = "SSH key ID registered in TimeWeb Cloud"
-  type        = string
+  type        = number
   sensitive   = true
+}
+
+variable "ssh_private_key_path" {
+  description = "Path to SSH private key for remote-exec provisioner"
+  type        = string
+  default     = "~/.ssh/delegata_rsa"
 }
 
 variable "server_name" {
@@ -21,10 +27,16 @@ variable "server_name" {
   type        = string
 }
 
-variable "preset_id" {
-  description = "TimeWeb Cloud server preset (2 vCPU, 4 GB RAM, 50 GB SSD)"
+variable "preset_cpu" {
+  description = "Number of CPU cores for the server preset"
   type        = number
-  default     = 1
+  default     = 2
+}
+
+variable "preset_ram" {
+  description = "RAM in MB for the server preset (must be divisible by 1024)"
+  type        = number
+  default     = 4096
 }
 
 variable "os_name" {

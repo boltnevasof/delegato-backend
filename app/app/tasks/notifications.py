@@ -4,7 +4,7 @@ from loguru import logger
 
 from app.broker import broker
 from app.core.constants import NotificationType
-from app.db.engine import async_session_factory
+from app.db.engine import session_context
 from app.repositories.notification import NotificationRepository
 from app.services.notification import NotificationService
 
@@ -23,11 +23,19 @@ async def send_notification(
         type=notification_type, user=user_id,
     )
 
-    async with async_session_factory() as session:
+    from app.core.container import Container
+    session = Container.session()
+    token = session_context.set(session)
+    try:
         service = NotificationService(
-            notification_repository=NotificationRepository(session),
+            notification_repository=Container.notification_repository(),
         )
         await service.send_notification(uid, ntype, data)
         await session.commit()
-
-    return {"success": True}
+        return {"success": True}
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+        session_context.reset(token)

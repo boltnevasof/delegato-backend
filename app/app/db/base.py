@@ -1,9 +1,19 @@
+import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, Enum, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+def EnumValue(enum_cls: type[enum.Enum], **kwargs) -> Enum:
+    """SQLAlchemy Enum that stores .value (lowercase) instead of .name (uppercase)."""
+    return Enum(
+        enum_cls,
+        values_callable=lambda obj: [e.value for e in obj],
+        **kwargs,
+    )
 
 
 class Base(DeclarativeBase):

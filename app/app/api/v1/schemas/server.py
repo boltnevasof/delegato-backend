@@ -21,6 +21,12 @@ class ServerLogItem(BaseModel):
     created_at: datetime
 
 
+class ServerProvisionResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+    server_id: uuid.UUID
+    status: str
+
+
 class ServerLogListResponse(BaseModel):
     model_config = ConfigDict(strict=True)
     items: list[ServerLogItem]

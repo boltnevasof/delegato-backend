@@ -1,7 +1,7 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, manage_session
 from app.api.v1.schemas.tariff import (
     CustomTariffRequestCreate,
     CustomTariffRequestResponse,
@@ -22,6 +22,7 @@ router = APIRouter(prefix="/tariffs", tags=["tariffs"])
     description="Возвращает все доступные тарифные планы с ценами, лимитами каналов, LLM-моделью и уровнем доступа к навыкам.",
 )
 @inject
+@manage_session
 async def list_tariffs(
     tariff_service: TariffService = Depends(Provide[Container.tariff_service]),
 ) -> TariffListResponse:
@@ -51,6 +52,7 @@ async def list_tariffs(
     description="Создаёт заявку на индивидуальный тарифный план. Менеджер свяжется с пользователем по указанным контактам.",
 )
 @inject
+@manage_session
 async def create_custom_request(
     body: CustomTariffRequestCreate,
     current_user: User = Depends(get_current_user),

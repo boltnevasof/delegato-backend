@@ -3,7 +3,7 @@ import uuid
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, manage_session
 from app.api.v1.schemas.channel import (
     ChannelListResponse,
     ChannelResponse,
@@ -24,6 +24,7 @@ router = APIRouter(tags=["channels"])
     description="Возвращает все подключённые каналы связи (Telegram и др.) AI-агента текущего пользователя.",
 )
 @inject
+@manage_session
 async def get_channels(
     current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(Provide[Container.agent_service]),
@@ -50,6 +51,7 @@ async def get_channels(
     description="Изменяет статус канала связи агента (подключён / отключён).",
 )
 @inject
+@manage_session
 async def update_channel(
     channel_id: uuid.UUID,
     body: UpdateChannelRequest,

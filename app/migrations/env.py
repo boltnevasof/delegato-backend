@@ -1,12 +1,14 @@
 import asyncio
 from logging.config import fileConfig
 
+import sqlalchemy as sa
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import settings
 from app.db.base import Base
+import app.models  # noqa: F401 — register all models with Base.metadata
 
 config = context.config
 
@@ -16,6 +18,17 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def render_item(type_, obj, autogen_context):
+    """Render Python Enum types using .value (lowercase) instead of .name (uppercase)."""
+    if type_ == "type" and isinstance(obj, sa.Enum) and obj.enum_class is not None:
+        values = [e.value for e in obj.enum_class]
+        return "sa.Enum({}, name={!r})".format(
+            ", ".join(repr(v) for v in values),
+            obj.name,
+        )
+    return False
+
+
 def run_migrations_offline() -> None:
     url = settings.DATABASE_URL
     context.configure(
@@ -23,13 +36,18 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_item=render_item,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def do_run_migrations(connection):
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        render_item=render_item,
+    )
     with context.begin_transaction():
         context.run_migrations()
 

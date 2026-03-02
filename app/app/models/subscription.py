@@ -4,12 +4,12 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.constants import SubscriptionStatus
-from app.db.base import Base, FullTimestampMixin, UUIDMixin
+from app.db.base import Base, EnumValue, FullTimestampMixin, UUIDMixin
 
 if TYPE_CHECKING:
     from app.models.tariff import TariffPlan
@@ -25,7 +25,7 @@ class Subscription(Base, UUIDMixin, FullTimestampMixin):
         UUID(as_uuid=True), ForeignKey("tariff_plans.id"), nullable=False,
     )
     status: Mapped[SubscriptionStatus] = mapped_column(
-        Enum(SubscriptionStatus, name="subscription_status", create_constraint=True),
+        EnumValue(SubscriptionStatus, name="subscription_status", create_constraint=True),
         nullable=False,
         server_default=SubscriptionStatus.ACTIVE.value,
     )

@@ -16,12 +16,13 @@ terraform {
     #   -backend-config=endpoint=...
     #   -backend-config=access_key=...
     #   -backend-config=secret_key=...
-    #   -backend-config=region=nl-1
+    #   -backend-config=region=ru-1
     skip_credentials_validation = true
     skip_metadata_api_check     = true
     skip_region_validation      = true
-    force_path_style            = true
     skip_requesting_account_id  = true
+    skip_s3_checksum            = true
+    use_path_style              = true
   }
 }
 

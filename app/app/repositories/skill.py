@@ -1,15 +1,16 @@
 import uuid
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SkillAccessLevel
+from app.db.engine import session_context
 from app.models.skill import SkillCatalog, SkillPreset
 
 
 class SkillCatalogRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    @property
+    def _session(self):
+        return session_context.get()
 
     async def list_active(self) -> list[SkillCatalog]:
         result = await self._session.execute(

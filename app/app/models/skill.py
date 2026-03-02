@@ -1,11 +1,11 @@
 import uuid
 
-from sqlalchemy import Boolean, Column, Enum, ForeignKey, String, Table, Text
+from sqlalchemy import Boolean, Column, ForeignKey, String, Table, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.constants import SkillAccessLevel
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, EnumValue, TimestampMixin, UUIDMixin
 
 # Junction table for skill presets
 skill_preset_skills = Table(
@@ -23,7 +23,7 @@ class SkillCatalog(Base, UUIDMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     access_level: Mapped[SkillAccessLevel] = mapped_column(
-        Enum(SkillAccessLevel, name="skill_access_level", create_constraint=True, create_type=False),
+        EnumValue(SkillAccessLevel, name="skill_access_level", create_constraint=True, create_type=False),
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")

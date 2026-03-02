@@ -11,3 +11,5 @@ result_backend = RedisAsyncResultBackend(
 broker = RedisStreamBroker(
     url=settings.REDIS_URL,
 ).with_result_backend(result_backend)
+
+import app.tasks  # noqa: E402, F401 — register all tasks with broker

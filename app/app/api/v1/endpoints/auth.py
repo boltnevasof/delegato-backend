@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from app.api.deps import manage_session
 from app.api.v1.schemas.auth import (
     OTPSendRequest,
     OTPSendResponse,
@@ -33,6 +34,7 @@ limiter = Limiter(key_func=get_remote_address)
 )
 @limiter.limit("5/minute")
 @inject
+@manage_session
 async def send_otp(
     request: Request,
     body: OTPSendRequest,
@@ -50,6 +52,7 @@ async def send_otp(
 )
 @limiter.limit("10/minute")
 @inject
+@manage_session
 async def verify_otp(
     request: Request,
     body: OTPVerifyRequest,
@@ -70,6 +73,7 @@ async def verify_otp(
     description="Перенаправляет (302) на страницу авторизации Google. Используется как первый шаг OAuth2 flow.",
 )
 @inject
+@manage_session
 async def google_initiate(
     auth_service: AuthService = Depends(Provide[Container.auth_service]),
 ) -> Response:
@@ -84,6 +88,7 @@ async def google_initiate(
     description="Обрабатывает ответ Google после авторизации. Создаёт или находит пользователя и возвращает JWT токены.",
 )
 @inject
+@manage_session
 async def google_callback(
     code: str,
     state: str,
@@ -105,6 +110,7 @@ async def google_callback(
     description="Проверяет данные Telegram Login Widget (hash-подпись). Создаёт или находит пользователя и возвращает JWT токены.",
 )
 @inject
+@manage_session
 async def telegram_verify(
     body: TelegramAuthRequest,
     auth_service: AuthService = Depends(Provide[Container.auth_service]),
@@ -133,6 +139,7 @@ async def telegram_verify(
     description="Принимает refresh-токен и возвращает новую пару access/refresh токенов. Старый refresh-токен инвалидируется.",
 )
 @inject
+@manage_session
 async def refresh_token(
     body: RefreshTokenRequest,
     auth_service: AuthService = Depends(Provide[Container.auth_service]),

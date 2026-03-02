@@ -2,15 +2,16 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import NotificationStatus
+from app.db.engine import session_context
 from app.models.notification import Notification
 
 
 class NotificationRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    @property
+    def _session(self):
+        return session_context.get()
 
     async def create(self, **kwargs) -> Notification:
         notification = Notification(**kwargs)

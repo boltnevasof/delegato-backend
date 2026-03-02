@@ -3,7 +3,7 @@ import uuid
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, manage_session
 from app.api.v1.schemas.skill import (
     AddSkillRequest,
     AgentSkillResponse,
@@ -27,6 +27,7 @@ router = APIRouter(tags=["skills"])
     description="Возвращает полный каталог доступных навыков и пресеты (готовые наборы навыков).",
 )
 @inject
+@manage_session
 async def get_skill_catalog(
     current_user: User = Depends(get_current_user),
     skill_service: SkillService = Depends(Provide[Container.skill_service]),
@@ -46,6 +47,7 @@ async def get_skill_catalog(
     description="Активирует указанный навык из каталога для AI-агента текущего пользователя.",
 )
 @inject
+@manage_session
 async def add_skill(
     body: AddSkillRequest,
     current_user: User = Depends(get_current_user),
@@ -65,6 +67,7 @@ async def add_skill(
     description="Включает или выключает ранее добавленный навык агента без удаления.",
 )
 @inject
+@manage_session
 async def toggle_skill(
     skill_id: uuid.UUID,
     body: ToggleSkillRequest,
@@ -86,6 +89,7 @@ async def toggle_skill(
     description="Полностью удаляет навык из агента. Для повторного использования потребуется добавить заново.",
 )
 @inject
+@manage_session
 async def remove_skill(
     skill_id: uuid.UUID,
     current_user: User = Depends(get_current_user),

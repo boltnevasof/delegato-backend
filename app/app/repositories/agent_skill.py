@@ -1,14 +1,15 @@
 import uuid
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.engine import session_context
 from app.models.agent_skill import AgentSkill
 
 
 class AgentSkillRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    @property
+    def _session(self):
+        return session_context.get()
 
     async def create(self, agent_id: uuid.UUID, skill_id: uuid.UUID) -> AgentSkill:
         agent_skill = AgentSkill(agent_id=agent_id, skill_id=skill_id)

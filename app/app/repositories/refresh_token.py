@@ -2,14 +2,15 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.engine import session_context
 from app.models.refresh_token import RefreshToken
 
 
 class RefreshTokenRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    @property
+    def _session(self):
+        return session_context.get()
 
     async def create(
         self, user_id: uuid.UUID, jti: str, expires_at: datetime,
