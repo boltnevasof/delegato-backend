@@ -92,7 +92,7 @@ class ProvisioningService:
                 f"-backend-config=endpoint={settings.TERRAFORM_STATE_ENDPOINT}",
                 f"-backend-config=access_key={settings.TERRAFORM_STATE_ACCESS_KEY}",
                 f"-backend-config=secret_key={settings.TERRAFORM_STATE_SECRET_KEY}",
-                "-backend-config=region=nl-1",
+                "-backend-config=region=ru-1",
             ]
             rc, stdout, stderr = await self._run_subprocess(
                 init_cmd, cwd=tmpdir, env=tf_env,
@@ -112,6 +112,7 @@ class ProvisioningService:
             apply_env = {
                 **tf_env,
                 "TF_VAR_server_name": f"delegato-server-{server_id}",
+                "TF_VAR_ssh_private_key_path": settings.SSH_PRIVATE_KEY_PATH,
             }
             apply_cmd = ["terraform", "apply", "-auto-approve", "-input=false"]
             rc, stdout, stderr = await self._run_subprocess(
@@ -371,7 +372,7 @@ class ProvisioningService:
                 f"-backend-config=endpoint={settings.TERRAFORM_STATE_ENDPOINT}",
                 f"-backend-config=access_key={settings.TERRAFORM_STATE_ACCESS_KEY}",
                 f"-backend-config=secret_key={settings.TERRAFORM_STATE_SECRET_KEY}",
-                "-backend-config=region=nl-1",
+                "-backend-config=region=ru-1",
             ]
             rc, stdout, stderr = await self._run_subprocess(
                 init_cmd, cwd=tmpdir, env=tf_env,
@@ -388,6 +389,7 @@ class ProvisioningService:
             destroy_env = {
                 **tf_env,
                 "TF_VAR_server_name": f"delegato-server-{server_id}",
+                "TF_VAR_ssh_private_key_path": settings.SSH_PRIVATE_KEY_PATH,
             }
             rc, stdout, stderr = await self._run_subprocess(
                 ["terraform", "destroy", "-auto-approve", "-input=false"],
@@ -442,8 +444,10 @@ class ProvisioningService:
         """Build environment dict with TF_VAR_* secrets."""
         return {
             "TF_VAR_twc_token": settings.TIMEWEB_API_TOKEN,
-            "TF_VAR_twc_region": settings.TIMEWEB_REGION,
+            "TF_VAR_availability_zone": settings.TIMEWEB_AVAILABILITY_ZONE,
             "TF_VAR_twc_ssh_key_id": settings.TIMEWEB_SSH_KEY_ID,
+            "TF_VAR_preset_cpu": str(settings.TIMEWEB_PRESET_CPU),
+            "TF_VAR_preset_ram": str(settings.TIMEWEB_PRESET_RAM),
         }
 
     async def _build_extra_vars(self, agent_id: uuid.UUID) -> dict:

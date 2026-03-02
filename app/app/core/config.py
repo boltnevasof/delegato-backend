@@ -56,8 +56,10 @@ class Settings(BaseSettings):
 
     # Infrastructure (Terraform + Ansible)
     TIMEWEB_API_TOKEN: str = ""
-    TIMEWEB_REGION: str = "nl-1"
+    TIMEWEB_AVAILABILITY_ZONE: str = "ams-1"
     TIMEWEB_SSH_KEY_ID: str = ""
+    TIMEWEB_PRESET_CPU: int = 2
+    TIMEWEB_PRESET_RAM: int = 4096
     TERRAFORM_STATE_BUCKET: str = ""
     TERRAFORM_STATE_ENDPOINT: str = "https://s3.twcstorage.ru"
     TERRAFORM_STATE_ACCESS_KEY: str = ""
