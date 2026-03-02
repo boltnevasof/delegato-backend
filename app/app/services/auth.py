@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.integrations.starlette_client import OAuth
+from loguru import logger
 
 from app.core.config import settings
 from app.core.constants import AuthProvider
@@ -45,7 +46,10 @@ class AuthService:
         code = "".join(secrets.choice("0123456789") for _ in range(6))
         expires_at = datetime.now(UTC) + timedelta(minutes=5)
         await self._otp_repo.create(email=dto.email, code=code, expires_at=expires_at)
-        await self._email_service.send_otp(dto.email, code)
+        try:
+            await self._email_service.send_otp(dto.email, code)
+        except Exception:
+            logger.exception("Failed to send OTP email to {email}", email=dto.email)
         return 300  # expires_in seconds
 
     async def verify_otp(self, dto: OTPVerifyDTO) -> TokenPairDTO:
