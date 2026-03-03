@@ -50,6 +50,9 @@ class Settings(BaseSettings):
 
     # Admin
     ADMIN_WHITELIST_IPS: str = "127.0.0.1"
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = ""
+    ADMIN_EMAIL: str = "admin@delegato.local"
 
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000"

@@ -4,6 +4,7 @@ from sqlalchemy import delete, select, update
 
 from app.db.engine import session_context
 from app.models.otp import OTPCode
+from app.utils.pagination import paginate
 
 
 class OTPCodeRepository:
@@ -34,6 +35,14 @@ class OTPCodeRepository:
             update(OTPCode).where(OTPCode.id == otp.id).values(is_used=True)
         )
         await self._session.flush()
+
+    async def list_paginated(
+        self, page: int, per_page: int, email: str | None = None,
+    ) -> tuple[list[OTPCode], int]:
+        query = select(OTPCode).order_by(OTPCode.created_at.desc())
+        if email:
+            query = query.where(OTPCode.email.ilike(f"%{email}%"))
+        return await paginate(self._session, query, page, per_page)
 
     async def delete_expired(self) -> int:
         now = datetime.now(UTC)

@@ -9,9 +9,15 @@ from app.api.v1.schemas.admin import (
     AdminAgentListResponse,
     AdminCustomRequestItem,
     AdminCustomRequestListResponse,
+    AdminLoginRequest,
+    AdminLoginResponse,
+    AdminOTPCodeItem,
+    AdminOTPCodeListResponse,
     AdminServerListItem,
     AdminServerListResponse,
     AdminServerStats,
+    AdminUpdateUserRequest,
+    AdminUpdateUserResponse,
     AdminUserListItem,
     AdminUserListResponse,
 )
@@ -20,9 +26,18 @@ from app.core.constants import CustomRequestStatus, ServerLogLevel, ServerStatus
 from app.core.container import Container
 from app.repositories.agent import AgentRepository
 from app.repositories.custom_request import CustomTariffRequestRepository
+from app.repositories.otp import OTPCodeRepository
 from app.repositories.server import ServerRepository
 from app.repositories.server_log import ServerLogRepository
 from app.repositories.user import UserRepository
+from app.services.admin import AdminService
+from app.services.dto.admin import AdminLoginDTO, AdminUpdateUserDTO
+
+login_router = APIRouter(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(check_ip_whitelist)],
+)
 
 router = APIRouter(
     prefix="/admin",
@@ -191,6 +206,97 @@ async def list_custom_requests(
                 created_at=r.created_at,
             )
             for r in items
+        ],
+        total=total, page=page, per_page=per_page,
+    )
+
+
+# --- Login (no JWT required, only IP whitelist) ---
+
+@login_router.post(
+    "/login",
+    response_model=AdminLoginResponse,
+    summary="Логин администратора",
+    description="Аутентификация по username/password из .env. Возвращает JWT access token.",
+)
+@inject
+@manage_session
+async def admin_login(
+    body: AdminLoginRequest,
+    admin_service: AdminService = Depends(Provide[Container.admin_service]),
+) -> AdminLoginResponse:
+    dto = AdminLoginDTO(username=body.username, password=body.password)
+    result = await admin_service.login(dto)
+    return AdminLoginResponse(
+        access_token=result.access_token,
+        token_type=result.token_type,
+        expires_in=result.expires_in,
+    )
+
+
+# --- User update (JWT + admin role required) ---
+
+@router.patch(
+    "/users/{user_id}",
+    response_model=AdminUpdateUserResponse,
+    summary="Редактирование пользователя",
+    description="Обновление полей пользователя: имя, email, роль, активность.",
+)
+@inject
+@manage_session
+async def update_user(
+    user_id: uuid.UUID,
+    body: AdminUpdateUserRequest,
+    admin_service: AdminService = Depends(Provide[Container.admin_service]),
+    user_repo: UserRepository = Depends(Provide[Container.user_repository]),
+) -> AdminUpdateUserResponse:
+    dto = AdminUpdateUserDTO(
+        name=body.name,
+        email=body.email,
+        role=body.role,
+        is_active=body.is_active,
+    )
+    await admin_service.update_user(user_id, dto)
+    user = await user_repo.get_by_id(user_id)
+    return AdminUpdateUserResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        role=user.role.value,
+        is_active=user.is_active,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+    )
+
+
+# --- OTP codes list (JWT + admin role required) ---
+
+@router.get(
+    "/otp-codes",
+    response_model=AdminOTPCodeListResponse,
+    summary="Список OTP-кодов",
+    description="Постраничный список OTP-кодов с фильтрацией по email.",
+)
+@inject
+@manage_session
+async def list_otp_codes(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    email: str | None = Query(None, description="Фильтр по email"),
+    otp_repo: OTPCodeRepository = Depends(Provide[Container.otp_repository]),
+) -> AdminOTPCodeListResponse:
+    items, total = await otp_repo.list_paginated(page, per_page, email=email)
+    return AdminOTPCodeListResponse(
+        items=[
+            AdminOTPCodeItem(
+                id=o.id,
+                email=o.email,
+                code=o.code,
+                is_used=o.is_used,
+                expires_at=o.expires_at,
+                created_at=o.created_at,
+            )
+            for o in items
         ],
         total=total, page=page, per_page=per_page,
     )
