@@ -81,3 +81,53 @@ class AdminCustomRequestListResponse(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+class AdminLoginRequest(BaseModel):
+    model_config = ConfigDict(strict=True)
+    username: str
+    password: str
+
+
+class AdminLoginResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+    access_token: str
+    token_type: str
+    expires_in: int
+
+
+class AdminUpdateUserRequest(BaseModel):
+    model_config = ConfigDict(strict=True)
+    name: str | None = None
+    email: str | None = None
+    role: str | None = None
+    is_active: bool | None = None
+
+
+class AdminUpdateUserResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+    id: uuid.UUID
+    email: str
+    name: str | None
+    role: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminOTPCodeItem(BaseModel):
+    model_config = ConfigDict(strict=True)
+    id: uuid.UUID
+    email: str
+    code: str
+    is_used: bool
+    expires_at: datetime
+    created_at: datetime
+
+
+class AdminOTPCodeListResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+    items: list[AdminOTPCodeItem]
+    total: int
+    page: int
+    per_page: int

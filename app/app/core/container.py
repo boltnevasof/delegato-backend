@@ -23,6 +23,7 @@ from app.repositories.tool import ToolCatalogRepository
 from app.repositories.user import UserRepository
 
 # Services
+from app.services.admin import AdminService
 from app.services.agent import AgentService
 from app.services.auth import AuthService
 from app.services.channel import ChannelService
@@ -92,6 +93,12 @@ class Container(containers.DeclarativeContainer):
     payment_gateway = providers.Singleton(_create_payment_gateway)
 
     # --- Services ---
+    admin_service = providers.Singleton(
+        AdminService,
+        user_repository=user_repository,
+        otp_repository=otp_repository,
+    )
+
     auth_service = providers.Singleton(
         AuthService,
         user_repository=user_repository,

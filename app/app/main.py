@@ -17,7 +17,7 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 from app.api.v1.api_routers import v1_router
 from app.core.config import settings
 from app.core.container import Container
-from app.db.engine import engine
+from app.db.engine import engine, session_context
 from app.exceptions.base import AppException
 
 # --- Request context ---
@@ -61,6 +61,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 SqlalchemyIntegration(),
             ],
         )
+
+    # Ensure admin user exists on startup
+    session = Container.session()
+    token = session_context.set(session)
+    try:
+        admin_service = container.admin_service()
+        await admin_service.ensure_admin_user_exists()
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        logger.exception("Failed to ensure admin user exists")
+    finally:
+        await session.close()
+        session_context.reset(token)
+
     yield
     await engine.dispose()
 

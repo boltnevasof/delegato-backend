@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.api.v1.endpoints.admin import login_router as admin_login_router
 from app.api.v1.endpoints.admin import router as admin_router
 from app.api.v1.endpoints.agents import router as agents_router
 from app.api.v1.endpoints.auth import router as auth_router
@@ -25,5 +26,6 @@ v1_router.include_router(tools_router)
 v1_router.include_router(channels_router)
 v1_router.include_router(subscriptions_router)
 v1_router.include_router(servers_router)
+v1_router.include_router(admin_login_router)
 v1_router.include_router(admin_router)
 v1_router.include_router(health_router)
