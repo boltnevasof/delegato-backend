@@ -37,7 +37,7 @@ class AdminService:
         access_token = create_access_token(user.id, user.role.value)
         return AdminTokenDTO(
             access_token=access_token,
-            expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            expires_in=settings.ADMIN_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
     async def update_user(self, user_id: uuid.UUID, dto: AdminUpdateUserDTO) -> None:

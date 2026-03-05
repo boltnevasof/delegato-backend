@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD: str = ""
     ADMIN_EMAIL: str = "admin@delegato.local"
+    ADMIN_ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000"
