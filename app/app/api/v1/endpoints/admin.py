@@ -16,18 +16,21 @@ from app.api.v1.schemas.admin import (
     AdminServerListItem,
     AdminServerListResponse,
     AdminServerStats,
+    AdminSupportRequestItem,
+    AdminSupportRequestListResponse,
     AdminUpdateUserRequest,
     AdminUpdateUserResponse,
     AdminUserListItem,
     AdminUserListResponse,
 )
 from app.api.v1.schemas.server import ServerLogItem, ServerLogListResponse
-from app.core.constants import CustomRequestStatus, ServerLogLevel, ServerStatus
+from app.core.constants import CustomRequestStatus, ServerLogLevel, ServerStatus, SupportRequestStatus
 from app.core.container import Container
 from app.repositories.agent import AgentRepository
 from app.repositories.custom_request import CustomTariffRequestRepository
 from app.repositories.otp import OTPCodeRepository
 from app.repositories.server import ServerRepository
+from app.repositories.support_request import SupportRequestRepository
 from app.repositories.server_log import ServerLogRepository
 from app.repositories.user import UserRepository
 from app.services.admin import AdminService
@@ -297,6 +300,42 @@ async def list_otp_codes(
                 created_at=o.created_at,
             )
             for o in items
+        ],
+        total=total, page=page, per_page=per_page,
+    )
+
+
+@router.get(
+    "/support-requests",
+    response_model=AdminSupportRequestListResponse,
+    summary="Заявки в поддержку",
+    description="Постраничный список заявок в поддержку с фильтрацией по статусу (new, in_progress, closed).",
+)
+@inject
+@manage_session
+async def list_support_requests(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    status: str | None = Query(None, description="Фильтр по статусу заявки"),
+    support_repo: SupportRequestRepository = Depends(
+        Provide[Container.support_request_repository],
+    ),
+) -> AdminSupportRequestListResponse:
+    req_status = SupportRequestStatus(status) if status else None
+    items, total = await support_repo.list_paginated(page, per_page, status=req_status)
+    return AdminSupportRequestListResponse(
+        items=[
+            AdminSupportRequestItem(
+                id=r.id,
+                user_id=r.user_id,
+                topic=r.topic,
+                description=r.description,
+                contact_method=r.contact_method,
+                contact=r.contact,
+                status=r.status.value,
+                created_at=r.created_at,
+            )
+            for r in items
         ],
         total=total, page=page, per_page=per_page,
     )

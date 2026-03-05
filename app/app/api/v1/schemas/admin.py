@@ -131,3 +131,23 @@ class AdminOTPCodeListResponse(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+class AdminSupportRequestItem(BaseModel):
+    model_config = ConfigDict(strict=True)
+    id: uuid.UUID
+    user_id: uuid.UUID
+    topic: str
+    description: str
+    contact_method: str
+    contact: str
+    status: str
+    created_at: datetime
+
+
+class AdminSupportRequestListResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+    items: list[AdminSupportRequestItem]
+    total: int
+    page: int
+    per_page: int

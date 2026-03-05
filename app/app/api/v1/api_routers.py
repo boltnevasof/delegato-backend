@@ -10,6 +10,7 @@ from app.api.v1.endpoints.payments import router as payments_router
 from app.api.v1.endpoints.servers import router as servers_router
 from app.api.v1.endpoints.skills import router as skills_router
 from app.api.v1.endpoints.subscriptions import router as subscriptions_router
+from app.api.v1.endpoints.support import router as support_router
 from app.api.v1.endpoints.tariffs import router as tariffs_router
 from app.api.v1.endpoints.tools import router as tools_router
 from app.api.v1.endpoints.users import router as users_router
@@ -25,6 +26,7 @@ v1_router.include_router(skills_router)
 v1_router.include_router(tools_router)
 v1_router.include_router(channels_router)
 v1_router.include_router(subscriptions_router)
+v1_router.include_router(support_router)
 v1_router.include_router(servers_router)
 v1_router.include_router(admin_login_router)
 v1_router.include_router(admin_router)

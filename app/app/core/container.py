@@ -18,6 +18,7 @@ from app.repositories.server import ServerRepository
 from app.repositories.server_log import ServerLogRepository
 from app.repositories.skill import SkillCatalogRepository
 from app.repositories.subscription import SubscriptionRepository
+from app.repositories.support_request import SupportRequestRepository
 from app.repositories.tariff import TariffRepository
 from app.repositories.tool import ToolCatalogRepository
 from app.repositories.user import UserRepository
@@ -37,6 +38,7 @@ from app.services.server import ServerService
 from app.services.skill import SkillService
 from app.services.tool import ToolService
 from app.services.subscription import SubscriptionService
+from app.services.support import SupportService
 from app.services.tariff import TariffService
 from app.services.user import UserService
 
@@ -61,6 +63,7 @@ class Container(containers.DeclarativeContainer):
             "app.api.v1.endpoints.channels",
             "app.api.v1.endpoints.subscriptions",
             "app.api.v1.endpoints.admin",
+            "app.api.v1.endpoints.support",
             "app.api.deps",
             "app.main",
         ],
@@ -76,6 +79,7 @@ class Container(containers.DeclarativeContainer):
     refresh_token_repository = providers.Singleton(RefreshTokenRepository)
     tariff_repository = providers.Singleton(TariffRepository)
     subscription_repository = providers.Singleton(SubscriptionRepository)
+    support_request_repository = providers.Singleton(SupportRequestRepository)
     agent_repository = providers.Singleton(AgentRepository)
     payment_repository = providers.Singleton(PaymentRepository)
     custom_request_repository = providers.Singleton(CustomTariffRequestRepository)
@@ -120,6 +124,11 @@ class Container(containers.DeclarativeContainer):
         TariffService,
         tariff_repository=tariff_repository,
         custom_request_repository=custom_request_repository,
+    )
+
+    support_service = providers.Singleton(
+        SupportService,
+        support_request_repository=support_request_repository,
     )
 
     subscription_service = providers.Singleton(
