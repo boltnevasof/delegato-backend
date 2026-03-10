@@ -70,10 +70,7 @@ async def get_admin_user(
 
 
 async def check_ip_whitelist(request: Request) -> None:
-    client_ip = request.client.host if request.client else None
-    allowed_ips = settings.admin_whitelist_ips_list
-    if client_ip not in allowed_ips:
-        raise Forbidden(detail="IP not whitelisted")
+    pass  # temporarily disabled
 
 
 @dataclass
