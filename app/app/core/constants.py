@@ -100,6 +100,12 @@ class CustomRequestStatus(str, enum.Enum):
     CLOSED = "closed"
 
 
+class SupportRequestStatus(str, enum.Enum):
+    NEW = "new"
+    IN_PROGRESS = "in_progress"
+    CLOSED = "closed"
+
+
 class ServerLogLevel(str, enum.Enum):
     INFO = "info"
     WARNING = "warning"

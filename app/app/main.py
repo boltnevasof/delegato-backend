@@ -99,6 +99,7 @@ app = FastAPI(
         {"name": "tools", "description": "Каталог инструментов и управление инструментами агента."},
         {"name": "channels", "description": "Каналы связи агента (Telegram и др.)."},
         {"name": "servers", "description": "Статус сервера агента и логи провижининга."},
+        {"name": "support", "description": "Создание обращений пользователя в поддержку."},
         {"name": "admin", "description": "Административная панель (требуется роль admin и IP whitelist)."},
     ],
 )
