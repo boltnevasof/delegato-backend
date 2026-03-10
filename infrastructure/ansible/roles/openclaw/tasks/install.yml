@@ -1,0 +1,62 @@
+---
+# T006: Install Node.js 22.x and OpenClaw
+
+- name: Check if Node.js is installed
+  ansible.builtin.command:
+    cmd: node --version
+  register: node_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Install Node.js 22.x from NodeSource
+  when: node_check.rc != 0
+  block:
+    - name: Download NodeSource setup script
+      ansible.builtin.get_url:
+        url: https://deb.nodesource.com/setup_22.x
+        dest: /tmp/nodesource_setup.sh
+        mode: "0755"
+
+    - name: Run NodeSource setup script
+      ansible.builtin.command:
+        cmd: bash /tmp/nodesource_setup.sh
+      changed_when: true
+
+    - name: Install Node.js
+      ansible.builtin.apt:
+        name: nodejs
+        state: present
+        update_cache: true
+
+    - name: Clean up setup script
+      ansible.builtin.file:
+        path: /tmp/nodesource_setup.sh
+        state: absent
+
+- name: Check if OpenClaw is installed
+  ansible.builtin.command:
+    cmd: openclaw --version
+  register: openclaw_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Install OpenClaw
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://openclaw.ai/install.sh | bash
+  when: openclaw_check.rc != 0
+  changed_when: true
+
+- name: Verify OpenClaw installation
+  ansible.builtin.command:
+    cmd: openclaw --version
+  changed_when: false
+
+- name: Create OpenClaw workspace directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ ansible_env.HOME }}/.openclaw/workspace"
+    - "{{ ansible_env.HOME }}/.openclaw/workspace/memory"
+    - "{{ ansible_env.HOME }}/.openclaw/workspace/skills"

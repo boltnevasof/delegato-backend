@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # Claude API
     CLAUDE_API_KEY: str = ""
 
+    # OpenAI (embeddings for OpenClaw memory)
+    OPENAI_API_KEY: str = ""
+
     # Sentry
     SENTRY_DSN: str = ""
 
@@ -68,7 +71,8 @@ class Settings(BaseSettings):
     TERRAFORM_STATE_ENDPOINT: str = "https://s3.twcstorage.ru"
     TERRAFORM_STATE_ACCESS_KEY: str = ""
     TERRAFORM_STATE_SECRET_KEY: str = ""
-    SSH_PRIVATE_KEY_PATH: str = "~/.ssh/delegata_rsa"
+    SSH_PRIVATE_KEY_PATH: str = "~/.ssh/id_ed25519"
+    SSH_PASSPHRASE: str = ""
     INFRASTRUCTURE_DIR: str = "infrastructure"
     OPENCLAW_DOCKER_IMAGE: str = "ghcr.io/openclaw/openclaw:latest"
 

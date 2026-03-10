@@ -1,0 +1,51 @@
+---
+# T023: Security hardening — permissions, gateway bind, Telegram policy
+
+# File permissions
+- name: Set permissions on .openclaw directory
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.openclaw"
+    mode: "0700"
+
+- name: Check if openclaw.json exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.openclaw/openclaw.json"
+  register: openclaw_json
+
+- name: Set permissions on openclaw.json
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.openclaw/openclaw.json"
+    mode: "0600"
+  when: openclaw_json.stat.exists
+
+- name: Check if credentials directory exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.openclaw/credentials"
+  register: openclaw_credentials
+
+- name: Set permissions on credentials directory
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.openclaw/credentials"
+    mode: "0700"
+  when: openclaw_credentials.stat.exists
+
+# Gateway bind verification
+- name: Verify gateway bind is loopback
+  ansible.builtin.command:
+    cmd: openclaw config get gateway.bind
+  register: gateway_bind
+  changed_when: false
+  ignore_errors: true
+
+- name: Set gateway bind to loopback if not already set
+  ansible.builtin.command:
+    cmd: openclaw config set gateway.bind "loopback"
+  when: gateway_bind.stdout | default('') != 'loopback'
+  changed_when: true
+
+# Telegram DM policy
+- name: Configure Telegram DM policy to pairing
+  ansible.builtin.command:
+    cmd: openclaw config set channels.telegram.dmPolicy "pairing"
+  when: client_telegram_user_id | default('') != ""
+  changed_when: true

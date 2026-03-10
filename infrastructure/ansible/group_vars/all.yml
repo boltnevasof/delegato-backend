@@ -1,0 +1,45 @@
+---
+# =============================================================================
+# Client Configuration
+# =============================================================================
+client_name: "Имя клиента"
+client_timezone: "MSK"
+client_language: "Русский"
+client_business: "Описание бизнеса клиента"
+client_telegram_user_id: ""
+
+# =============================================================================
+# OpenClaw Configuration
+# =============================================================================
+openclaw_version: "latest"
+openclaw_gateway_port: 18789
+openclaw_gateway_bind: "loopback"
+
+# Model settings (default for Ассистент tier)
+openclaw_model_primary: "openai-codex/gpt-5.4"
+openclaw_model_fallback: "openai-codex/gpt-5.3-codex"
+
+# =============================================================================
+# Embeddings / Memory
+# =============================================================================
+openai_api_key: ""
+openclaw_memory_provider: "openai"
+openclaw_memory_model: "text-embedding-3-small"
+
+# =============================================================================
+# SearXNG
+# =============================================================================
+searxng_port: 8888
+
+# =============================================================================
+# SSH
+# =============================================================================
+ssh_private_key_path: "{{ lookup('env', 'SSH_PRIVATE_KEY_PATH') | default('~/.ssh/id_ed25519', true) }}"
+ssh_passphrase: "{{ lookup('env', 'SSH_PASSPHRASE') | default('', true) }}"
+
+# =============================================================================
+# Security
+# =============================================================================
+ufw_allowed_ports:
+  - 22
+  - 443

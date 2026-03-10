@@ -1,11 +1,16 @@
+version: '3.8'
+
 services:
-  openclaw:
-    image: {{ openclaw_image | default('ghcr.io/openclaw/openclaw:latest') }}
-    container_name: openclaw
-    restart: always
-    env_file:
-      - .env
-    volumes:
-      - ./config:/app/config:ro
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:{{ searxng_port }}:8080"
+    volumes:
+      - searxng_data:/etc/searxng
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:{{ searxng_port }}/
+    restart: unless-stopped
+
+volumes:
+  searxng_data:

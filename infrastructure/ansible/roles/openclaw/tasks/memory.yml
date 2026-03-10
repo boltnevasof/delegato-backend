@@ -1,0 +1,99 @@
+---
+# T022: Configure OpenClaw memory search with OpenAI embeddings
+# This file is only included when openai_api_key != ""
+
+- name: Add OPENAI_API_KEY to bashrc
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    line: "export OPENAI_API_KEY={{ openai_api_key }}"
+    regexp: "^export OPENAI_API_KEY="
+    state: present
+
+# memorySearch configuration
+- name: Enable memorySearch
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.memorySearch.enabled true
+  changed_when: true
+
+- name: Set memorySearch provider
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.memorySearch.provider "{{ openclaw_memory_provider }}"
+  changed_when: true
+
+- name: Set memorySearch model
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.memorySearch.model "{{ openclaw_memory_model }}"
+  changed_when: true
+
+- name: Set memorySearch sources
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.memorySearch.sources '["memory", "sessions"]'
+  changed_when: true
+
+# Hybrid search configuration
+- name: Enable hybrid search
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.memorySearch.query.hybrid.enabled true
+  changed_when: true
+
+- name: Set hybrid vectorWeight
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.memorySearch.query.hybrid.vectorWeight 0.7
+  changed_when: true
+
+- name: Set hybrid textWeight
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.memorySearch.query.hybrid.textWeight 0.3
+  changed_when: true
+
+- name: Set hybrid candidateMultiplier
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.memorySearch.query.hybrid.candidateMultiplier 4
+  changed_when: true
+
+# MMR configuration
+- name: Enable MMR
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.memorySearch.query.hybrid.mmr.enabled true
+  changed_when: true
+
+- name: Set MMR lambda
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.memorySearch.query.hybrid.mmr.lambda 0.7
+  changed_when: true
+
+# Compaction configuration
+- name: Enable memoryFlush compaction
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.compaction.memoryFlush.enabled true
+  changed_when: true
+
+- name: Set memoryFlush softThresholdTokens
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.compaction.memoryFlush.softThresholdTokens 4000
+  changed_when: true
+
+# Tools profile
+- name: Set tools profile to full
+  ansible.builtin.command:
+    cmd: openclaw config set agents.defaults.tools.profile "full"
+  changed_when: true
+
+# Index and verify
+- name: Run memory indexing
+  ansible.builtin.command:
+    cmd: openclaw memory index
+  changed_when: true
+  ignore_errors: true
+  register: memory_index_result
+
+- name: Warn if memory indexing failed
+  ansible.builtin.debug:
+    msg: "WARNING: Memory indexing failed - agent will operate without memory until resolved. Error: {{ memory_index_result.stderr | default('unknown') }}"
+  when: memory_index_result is failed
+
+- name: Verify memory status
+  ansible.builtin.command:
+    cmd: openclaw memory status
+  changed_when: false
+  ignore_errors: true

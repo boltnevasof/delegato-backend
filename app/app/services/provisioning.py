@@ -206,7 +206,7 @@ class ProvisioningService:
                 mode="w", suffix=".ini", prefix="ansible-inv-", delete=False,
             )
             inventory_fd.write(
-                f"[server]\n"
+                f"[openclaw_servers]\n"
                 f"{server.ip_address} ansible_user=root "
                 f"ansible_ssh_private_key_file={settings.SSH_PRIVATE_KEY_PATH}\n"
             )
@@ -227,8 +227,9 @@ class ProvisioningService:
                 f"--extra-vars=@{extravars_path}",
                 "site.yml",
             ]
+            ansible_env = self._ssh_agent_env()
             rc, stdout, stderr = await self._run_subprocess(
-                cmd, cwd=ansible_dir,
+                cmd, cwd=ansible_dir, env=ansible_env,
             )
             await self._log_step(
                 server_id, ServerLogLevel.INFO, "ansible",
@@ -288,7 +289,7 @@ class ProvisioningService:
                 mode="w", suffix=".ini", prefix="ansible-inv-", delete=False,
             )
             inventory_fd.write(
-                f"[server]\n"
+                f"[openclaw_servers]\n"
                 f"{server.ip_address} ansible_user=root "
                 f"ansible_ssh_private_key_file={settings.SSH_PRIVATE_KEY_PATH}\n"
             )
@@ -308,8 +309,9 @@ class ProvisioningService:
                 f"--extra-vars=@{extravars_path}",
                 "update_agent_config.yml",
             ]
+            ansible_env = self._ssh_agent_env()
             rc, stdout, stderr = await self._run_subprocess(
-                cmd, cwd=ansible_dir,
+                cmd, cwd=ansible_dir, env=ansible_env,
             )
             await self._log_step(
                 server_id, ServerLogLevel.INFO, "ansible",
@@ -485,8 +487,26 @@ class ProvisioningService:
                 for c in channels
             ],
             "claude_api_key": settings.CLAUDE_API_KEY,
+            "openai_api_key": settings.OPENAI_API_KEY,
             "openclaw_image": settings.OPENCLAW_DOCKER_IMAGE,
         }
+
+    @staticmethod
+    def _ssh_agent_env() -> dict[str, str]:
+        """Build env vars for SSH key passphrase support via SSH_ASKPASS."""
+        env: dict[str, str] = {}
+        if settings.SSH_PASSPHRASE:
+            askpass_script = tempfile.NamedTemporaryFile(
+                mode="w", suffix=".sh", prefix="ssh-askpass-",
+                delete=False,
+            )
+            askpass_script.write(f"#!/bin/sh\necho '{settings.SSH_PASSPHRASE}'\n")
+            askpass_script.close()
+            os.chmod(askpass_script.name, 0o700)
+            env["SSH_ASKPASS"] = askpass_script.name
+            env["SSH_ASKPASS_REQUIRE"] = "force"
+            env["DISPLAY"] = ""
+        return env
 
     async def _run_subprocess(
         self,
