@@ -19,7 +19,7 @@ variable "twc_ssh_key_id" {
 variable "ssh_private_key_path" {
   description = "Path to SSH private key for remote-exec provisioner"
   type        = string
-  default     = "~/.ssh/delegata_rsa"
+  default     = "~/.ssh/id_ed25519"
 }
 
 variable "server_name" {
@@ -42,7 +42,7 @@ variable "preset_ram" {
 variable "os_name" {
   description = "Operating system name filter"
   type        = string
-  default     = "Ubuntu"
+  default     = "ubuntu"
 }
 
 variable "os_version" {

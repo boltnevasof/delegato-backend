@@ -1,0 +1,25 @@
+---
+# T011: Setup systemd service for OpenClaw gateway
+
+- name: Deploy openclaw-gateway systemd unit
+  ansible.builtin.template:
+    src: openclaw-gateway.service.j2
+    dest: /etc/systemd/system/openclaw-gateway.service
+    mode: "0644"
+  notify: restart openclaw-gateway
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start openclaw-gateway service
+  ansible.builtin.systemd:
+    name: openclaw-gateway
+    enabled: true
+    state: started
+
+- name: Wait for OpenClaw gateway to start
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ openclaw_gateway_port }}"
+    timeout: 60

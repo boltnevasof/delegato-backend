@@ -1,6 +1,6 @@
 output "server_ip" {
   description = "Public IPv4 address of the provisioned server"
-  value       = twc_server.agent.main_ipv4
+  value       = twc_server_ip.agent_ipv4.ip
 }
 
 output "server_id" {

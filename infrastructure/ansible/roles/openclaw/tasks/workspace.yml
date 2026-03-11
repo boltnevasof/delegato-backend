@@ -1,0 +1,62 @@
+---
+# T020: Deploy workspace files from Jinja2 templates (only if not exists)
+
+- name: Check if AGENTS.md exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.openclaw/workspace/AGENTS.md"
+  register: agents_md
+
+- name: Deploy AGENTS.md
+  ansible.builtin.template:
+    src: agents.md.j2
+    dest: "{{ ansible_env.HOME }}/.openclaw/workspace/AGENTS.md"
+    mode: "0644"
+  when: not agents_md.stat.exists
+
+- name: Check if SOUL.md exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.openclaw/workspace/SOUL.md"
+  register: soul_md
+
+- name: Deploy SOUL.md
+  ansible.builtin.template:
+    src: soul.md.j2
+    dest: "{{ ansible_env.HOME }}/.openclaw/workspace/SOUL.md"
+    mode: "0644"
+  when: not soul_md.stat.exists
+
+- name: Check if USER.md exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.openclaw/workspace/USER.md"
+  register: user_md
+
+- name: Deploy USER.md
+  ansible.builtin.template:
+    src: user.md.j2
+    dest: "{{ ansible_env.HOME }}/.openclaw/workspace/USER.md"
+    mode: "0644"
+  when: not user_md.stat.exists
+
+- name: Check if TOOLS.md exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.openclaw/workspace/TOOLS.md"
+  register: tools_md
+
+- name: Deploy TOOLS.md
+  ansible.builtin.template:
+    src: tools.md.j2
+    dest: "{{ ansible_env.HOME }}/.openclaw/workspace/TOOLS.md"
+    mode: "0644"
+  when: not tools_md.stat.exists
+
+- name: Check if MEMORY.md exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.openclaw/workspace/MEMORY.md"
+  register: memory_md
+
+- name: Deploy MEMORY.md
+  ansible.builtin.template:
+    src: memory.md.j2
+    dest: "{{ ansible_env.HOME }}/.openclaw/workspace/MEMORY.md"
+    mode: "0644"
+  when: not memory_md.stat.exists

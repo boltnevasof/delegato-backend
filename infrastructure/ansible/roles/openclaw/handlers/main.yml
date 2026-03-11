@@ -4,3 +4,8 @@
     cmd: docker compose restart
     chdir: /opt/openclaw
   changed_when: true
+
+- name: restart openclaw-gateway
+  ansible.builtin.systemd:
+    name: openclaw-gateway
+    state: restarted

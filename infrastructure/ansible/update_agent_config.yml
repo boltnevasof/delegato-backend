@@ -1,8 +1,55 @@
 ---
 - name: Update OpenClaw agent configuration
-  hosts: server
+  hosts: openclaw_servers
   become: true
-  gather_facts: false
+  gather_facts: true
 
-  roles:
-    - role: openclaw
+  tasks:
+    - name: Update workspace files
+      ansible.builtin.include_tasks: roles/openclaw/tasks/workspace.yml
+
+    - name: Deploy SOUL.md from extra-vars (if provided)
+      ansible.builtin.copy:
+        content: "{{ soul_md }}"
+        dest: "{{ ansible_env.HOME }}/.openclaw/workspace/SOUL.md"
+        mode: "0644"
+      when: soul_md is defined
+      notify: restart openclaw-gateway
+
+    - name: Deploy AGENT.md from extra-vars (if provided)
+      ansible.builtin.copy:
+        content: "{{ agent_md }}"
+        dest: "{{ ansible_env.HOME }}/.openclaw/workspace/AGENTS.md"
+        mode: "0644"
+      when: agent_md is defined
+      notify: restart openclaw-gateway
+
+    - name: Deploy skills.json from extra-vars (if provided)
+      ansible.builtin.copy:
+        content: "{{ skills | to_nice_json }}"
+        dest: "{{ ansible_env.HOME }}/.openclaw/workspace/skills/config.json"
+        mode: "0644"
+      when: skills is defined
+      notify: restart openclaw-gateway
+
+    - name: Deploy tools.json from extra-vars (if provided)
+      ansible.builtin.copy:
+        content: "{{ tools | to_nice_json }}"
+        dest: "{{ ansible_env.HOME }}/.openclaw/workspace/tools.json"
+        mode: "0644"
+      when: tools is defined
+      notify: restart openclaw-gateway
+
+    - name: Deploy channels.json from extra-vars (if provided)
+      ansible.builtin.copy:
+        content: "{{ channels | to_nice_json }}"
+        dest: "{{ ansible_env.HOME }}/.openclaw/workspace/channels.json"
+        mode: "0644"
+      when: channels is defined
+      notify: restart openclaw-gateway
+
+  handlers:
+    - name: restart openclaw-gateway
+      ansible.builtin.systemd:
+        name: openclaw-gateway
+        state: restarted

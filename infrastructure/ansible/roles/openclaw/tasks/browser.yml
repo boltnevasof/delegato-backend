@@ -1,0 +1,39 @@
+---
+# T021: Install Chromium and headless browser dependencies
+
+- name: Install headless browser dependencies
+  ansible.builtin.apt:
+    name:
+      - libx11-xcb1
+      - libxcomposite1
+      - libxcursor1
+      - libxdamage1
+      - libxi6
+      - libxtst6
+      - libnss3
+      - libcups2
+      - libxrandr2
+      - libasound2t64
+      - libpangocairo-1.0-0
+      - libatk1.0-0
+      - libatk-bridge2.0-0
+      - libgtk-3-0
+    state: present
+
+- name: Try installing Chromium via apt
+  ansible.builtin.apt:
+    name: chromium-browser
+    state: present
+  register: chromium_apt
+  ignore_errors: true
+
+- name: Install Chromium via snap (fallback)
+  ansible.builtin.command:
+    cmd: snap install chromium
+  when: chromium_apt is failed
+  changed_when: true
+
+- name: Verify Chromium installation
+  ansible.builtin.shell:
+    cmd: chromium-browser --version || chromium --version
+  changed_when: false

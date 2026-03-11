@@ -20,6 +20,7 @@ RUN apt-get update \
     && unzip /tmp/terraform.zip -d /usr/local/bin/ \
     && rm /tmp/terraform.zip \
     && pip install --no-cache-dir ansible-core \
+    && ansible-galaxy collection install community.general community.docker \
     && apt-get purge -y unzip \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*

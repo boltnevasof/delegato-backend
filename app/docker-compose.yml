@@ -47,6 +47,7 @@ services:
     env_file: .env
     volumes:
       - ../infrastructure:/app/infrastructure:ro
+      - ~/.ssh:/root/.ssh:ro
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,64 +1,24 @@
 ---
-- name: Create OpenClaw directories
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    mode: "0755"
-  loop:
-    - /opt/openclaw
-    - /opt/openclaw/config
+# OpenClaw role entry point — orchestrates all subtasks
 
-- name: Deploy SOUL.md
-  ansible.builtin.copy:
-    content: "{{ agent_soul_md | default('') }}"
-    dest: /opt/openclaw/config/SOUL.md
-    mode: "0644"
-  notify: restart openclaw
+- name: Install OpenClaw
+  ansible.builtin.include_tasks: install.yml
 
-- name: Deploy AGENT.md
-  ansible.builtin.copy:
-    content: "{{ agent_agent_md | default('') }}"
-    dest: /opt/openclaw/config/AGENT.md
-    mode: "0644"
-  notify: restart openclaw
+- name: Setup SearXNG
+  ansible.builtin.include_tasks: searxng.yml
 
-- name: Deploy skills.json
-  ansible.builtin.copy:
-    content: "{{ agent_skills | default([]) | to_nice_json }}"
-    dest: /opt/openclaw/config/skills.json
-    mode: "0644"
-  notify: restart openclaw
+- name: Setup Browser
+  ansible.builtin.include_tasks: browser.yml
 
-- name: Deploy tools.json
-  ansible.builtin.copy:
-    content: "{{ agent_tools | default([]) | to_nice_json }}"
-    dest: /opt/openclaw/config/tools.json
-    mode: "0644"
-  notify: restart openclaw
+- name: Setup Workspace files
+  ansible.builtin.include_tasks: workspace.yml
 
-- name: Deploy channels.json
-  ansible.builtin.copy:
-    content: "{{ agent_channels | default([]) | to_nice_json }}"
-    dest: /opt/openclaw/config/channels.json
-    mode: "0644"
-  notify: restart openclaw
+- name: Setup Memory and Embeddings
+  ansible.builtin.include_tasks: memory.yml
+  when: openai_api_key | default('') != ""
 
-- name: Deploy docker-compose.yml
-  ansible.builtin.template:
-    src: docker-compose.yml.j2
-    dest: /opt/openclaw/docker-compose.yml
-    mode: "0644"
-  notify: restart openclaw
+- name: Setup Systemd service
+  ansible.builtin.include_tasks: systemd.yml
 
-- name: Deploy .env file
-  ansible.builtin.template:
-    src: env.j2
-    dest: /opt/openclaw/.env
-    mode: "0600"
-  notify: restart openclaw
-
-- name: Start OpenClaw containers
-  ansible.builtin.command:
-    cmd: docker compose up -d
-    chdir: /opt/openclaw
-  changed_when: true
+- name: Setup Security
+  ansible.builtin.include_tasks: security.yml
