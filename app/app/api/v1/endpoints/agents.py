@@ -1,14 +1,15 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
+from taskiq_redis.exceptions import ResultIsMissingError
 
 from app.api.deps import get_current_user, manage_session
 from app.api.v1.schemas.agent import (
+    AgentAboutRequest,
+    AgentAboutResponse,
     AgentDetailResponse,
-    AgentMdUpdateRequest,
     AsyncTaskAcceptedResponse,
     AsyncTaskStatusResponse,
     ChannelSummary,
-    EnhanceRequest,
     OnboardingCompleteResponse,
     OnboardingConnectChannelRequest,
     OnboardingConnectChannelResponse,
@@ -17,14 +18,16 @@ from app.api.v1.schemas.agent import (
     OnboardingSelectSkillsResponse,
     ServerSummary,
     SkillSummary,
-    SoulMdUpdateRequest,
     ToolSummary,
 )
 from app.broker import broker
 from app.core.container import Container
 from app.models.user import User
+from app.repositories.agent_profile import AgentProfileRepository
+from app.repositories.agent_document import AgentDocumentRepository
 from app.services.agent import AgentService
 from app.services.channel import ChannelService
+from app.tasks.ai import generate_about_task
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -33,7 +36,7 @@ router = APIRouter(prefix="/agents", tags=["agents"])
     "/me",
     response_model=AgentDetailResponse,
     summary="Получить агента",
-    description="Возвращает полную информацию об AI-агенте текущего пользователя: статус, SOUL.md, навыки, инструменты, каналы и сервер.",
+    description="Возвращает полную информацию об AI-агенте текущего пользователя.",
 )
 @inject
 @manage_session
@@ -56,11 +59,85 @@ async def get_agent(
     )
 
 
+# ── Настройки агента (about) ───────────────────────────────────────────────────
+
+@router.get(
+    "/me/about",
+    response_model=AgentAboutResponse,
+    summary="Получить настройки агента",
+    description="Возвращает поля формы и сгенерированные MD-документы для текущего пользователя.",
+)
+@inject
+@manage_session
+async def get_agent_about(
+    current_user: User = Depends(get_current_user),
+    profile_repo: AgentProfileRepository = Depends(Provide[Container.agent_profile_repository]),
+    doc_repo: AgentDocumentRepository = Depends(Provide[Container.agent_document_repository]),
+) -> AgentAboutResponse:
+    profile = await profile_repo.get_by_user_id(current_user.id)
+    doc = await doc_repo.get_by_user_id(current_user.id)
+    return AgentAboutResponse(
+        name=profile.name if profile else None,
+        location=profile.location if profile else None,
+        about_self=profile.about_self if profile else None,
+        occupation=profile.occupation if profile else None,
+        agent_restrictions=profile.agent_restrictions if profile else None,
+        user_md=doc.user_md if doc else None,
+        agent_md=doc.agent_md if doc else None,
+        soul_md=doc.soul_md if doc else None,
+        is_synchronized=doc.is_synchronized if doc else False,
+    )
+
+
+@router.put(
+    "/me/about",
+    status_code=202,
+    response_model=AsyncTaskAcceptedResponse,
+    summary="Сохранить настройки агента",
+    description=(
+        "Сохраняет поля формы в agent_profiles и запускает фоновую AI-задачу "
+        "для генерации user_md, agent_md, soul_md. Возвращает task_id."
+    ),
+)
+@inject
+@manage_session
+async def save_agent_about(
+    body: AgentAboutRequest,
+    current_user: User = Depends(get_current_user),
+    profile_repo: AgentProfileRepository = Depends(Provide[Container.agent_profile_repository]),
+) -> AsyncTaskAcceptedResponse:
+    # Сохраняем данные формы немедленно
+    await profile_repo.upsert(
+        current_user.id,
+        name=body.name,
+        location=body.location,
+        about_self=body.about_self,
+        occupation=body.occupation,
+        agent_restrictions=body.agent_restrictions,
+    )
+
+    # Запускаем генерацию MD в фоне
+    task = await generate_about_task.kiq(
+        user_id=str(current_user.id),
+        name=body.name,
+        location=body.location,
+        about_self=body.about_self,
+        occupation=body.occupation,
+        agent_restrictions=body.agent_restrictions,
+    )
+    return AsyncTaskAcceptedResponse(
+        task_id=task.task_id,
+        message="Настройки сохранены, генерация MD запущена",
+    )
+
+
+# ── Онбординг ─────────────────────────────────────────────────────────────────
+
 @router.post(
     "/onboarding/describe",
     status_code=202,
     summary="Онбординг: описать бизнес",
-    description="Принимает текстовое описание бизнеса и запускает фоновую AI-задачу для генерации SOUL.md и AGENT.md. Возвращает task_id для отслеживания.",
+    description="Принимает текстовое описание бизнеса и запускает AI-задачу для генерации SOUL.md и AGENT.md.",
 )
 @inject
 @manage_session
@@ -77,7 +154,6 @@ async def onboarding_describe(
 @router.post(
     "/onboarding/skip-describe",
     summary="Онбординг: пропустить описание",
-    description="Пропускает шаг генерации SOUL.md из описания бизнеса. Пользователь сможет заполнить SOUL.md вручную позже.",
 )
 @inject
 @manage_session
@@ -93,23 +169,21 @@ async def onboarding_skip_describe(
     "/tasks/{task_id}/status",
     response_model=AsyncTaskStatusResponse,
     summary="Статус фоновой задачи",
-    description="Проверяет статус асинхронной задачи (AI-генерация, enhance). Возвращает pending / completed / failed.",
 )
 @manage_session
-async def get_task_status(
-    task_id: str,
-) -> AsyncTaskStatusResponse:
-    result = await broker.result_backend.get_result(task_id)
+async def get_task_status(task_id: str) -> AsyncTaskStatusResponse:
+    try:
+        result = await broker.result_backend.get_result(task_id)
+    except ResultIsMissingError:
+        return AsyncTaskStatusResponse(task_id=task_id, status="pending")
     if result is None:
         return AsyncTaskStatusResponse(task_id=task_id, status="pending")
-
     if result.is_err:
         return AsyncTaskStatusResponse(
             task_id=task_id,
             status="failed",
             error=str(result.error) if result.error else "Unknown error",
         )
-
     return AsyncTaskStatusResponse(
         task_id=task_id,
         status="completed",
@@ -122,7 +196,6 @@ async def get_task_status(
     response_model=OnboardingConnectChannelResponse,
     status_code=201,
     summary="Онбординг: подключить канал",
-    description="Подключает канал связи (Telegram) к агенту на этапе онбординга. Автоматически переводит онбординг на следующий шаг.",
 )
 @inject
 @manage_session
@@ -146,7 +219,6 @@ async def onboarding_connect_channel(
     "/onboarding/select-skills",
     response_model=OnboardingSelectSkillsResponse,
     summary="Онбординг: выбрать навыки",
-    description="Активирует выбранные навыки (по ID или пресету) для агента на этапе онбординга.",
 )
 @inject
 @manage_session
@@ -170,7 +242,6 @@ async def onboarding_select_skills(
     "/onboarding/complete",
     response_model=OnboardingCompleteResponse,
     summary="Онбординг: завершить",
-    description="Завершает онбординг агента и запускает провижининг сервера. Агент переходит в статус configuring.",
 )
 @inject
 @manage_session
@@ -181,55 +252,3 @@ async def onboarding_complete(
     agent = await agent_service.get_by_user(current_user.id)
     agent = await agent_service.complete_onboarding(agent.id)
     return OnboardingCompleteResponse(status=agent.status.value)
-
-
-@router.put(
-    "/me/soul-md",
-    summary="Обновить SOUL.md",
-    description="Заменяет содержимое SOUL.md агента. SOUL.md определяет личность, тон и поведение AI-агента.",
-)
-@inject
-@manage_session
-async def update_soul_md(
-    body: SoulMdUpdateRequest,
-    current_user: User = Depends(get_current_user),
-    agent_service: AgentService = Depends(Provide[Container.agent_service]),
-) -> dict:
-    agent = await agent_service.get_by_user(current_user.id)
-    await agent_service.update_soul_md(agent.id, body.content)
-    return {"content": body.content}
-
-
-@router.put(
-    "/me/agent-md",
-    summary="Обновить AGENT.md",
-    description="Заменяет содержимое AGENT.md агента. AGENT.md определяет инструкции, бизнес-правила и контекст работы агента.",
-)
-@inject
-@manage_session
-async def update_agent_md(
-    body: AgentMdUpdateRequest,
-    current_user: User = Depends(get_current_user),
-    agent_service: AgentService = Depends(Provide[Container.agent_service]),
-) -> dict:
-    agent = await agent_service.get_by_user(current_user.id)
-    await agent_service.update_agent_md(agent.id, body.content)
-    return {"content": body.content}
-
-
-@router.post(
-    "/me/enhance",
-    status_code=202,
-    summary="AI-улучшение контента",
-    description="Запускает фоновую AI-задачу для улучшения SOUL.md или AGENT.md. Возвращает task_id для отслеживания результата.",
-)
-@inject
-@manage_session
-async def enhance_content(
-    body: EnhanceRequest,
-    current_user: User = Depends(get_current_user),
-    agent_service: AgentService = Depends(Provide[Container.agent_service]),
-) -> AsyncTaskAcceptedResponse:
-    agent = await agent_service.get_by_user(current_user.id)
-    task_id = await agent_service.request_enhance(agent.id, body.field, body.content)
-    return AsyncTaskAcceptedResponse(task_id=task_id, message="AI enhancement started")

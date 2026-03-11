@@ -95,17 +95,25 @@ class OnboardingCompleteResponse(BaseModel):
     task_id: str | None = None
 
 
-class SoulMdUpdateRequest(BaseModel):
+class AgentAboutRequest(BaseModel):
+    """Данные формы 'Настройки агента'."""
     model_config = ConfigDict(strict=True)
-    content: str
+    name: str | None = None
+    location: str | None = None
+    about_self: str | None = None
+    occupation: str | None = None
+    agent_restrictions: str | None = None
 
 
-class AgentMdUpdateRequest(BaseModel):
+class AgentAboutResponse(BaseModel):
+    """Текущие настройки агента вместе со сгенерированными MD."""
     model_config = ConfigDict(strict=True)
-    content: str
-
-
-class EnhanceRequest(BaseModel):
-    model_config = ConfigDict(strict=True)
-    field: str = Field(pattern="^(soul_md|agent_md)$")
-    content: str
+    name: str | None
+    location: str | None
+    about_self: str | None
+    occupation: str | None
+    agent_restrictions: str | None
+    user_md: str | None
+    agent_md: str | None
+    soul_md: str | None
+    is_synchronized: bool

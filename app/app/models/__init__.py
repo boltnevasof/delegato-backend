@@ -1,5 +1,7 @@
 from app.models.agent import Agent
 from app.models.agent_channel import AgentChannel
+from app.models.agent_document import AgentDocument
+from app.models.agent_profile import AgentProfile
 from app.models.agent_skill import AgentSkill
 from app.models.agent_tool import AgentTool
 from app.models.custom_request import CustomTariffRequest
@@ -20,6 +22,8 @@ from app.models.user import User, UserAuthMethod
 __all__ = [
     "Agent",
     "AgentChannel",
+    "AgentDocument",
+    "AgentProfile",
     "AgentSkill",
     "AgentTool",
     "CustomTariffRequest",
