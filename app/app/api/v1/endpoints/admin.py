@@ -3,7 +3,7 @@ import uuid
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import check_ip_whitelist, get_admin_user, manage_session
+from app.api.deps import get_admin_user, manage_session
 from app.api.v1.schemas.admin import (
     AdminAgentListItem,
     AdminAgentListResponse,
@@ -55,13 +55,12 @@ from app.services.dto.admin import AdminLoginDTO, AdminUpdateUserDTO
 login_router = APIRouter(
     prefix="/admin",
     tags=["admin"],
-    dependencies=[Depends(check_ip_whitelist)],
 )
 
 router = APIRouter(
     prefix="/admin",
     tags=["admin"],
-    dependencies=[Depends(get_admin_user), Depends(check_ip_whitelist)],
+    dependencies=[Depends(get_admin_user)],
 )
 
 

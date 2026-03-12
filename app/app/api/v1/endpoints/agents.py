@@ -289,7 +289,7 @@ async def get_onboarding_state(
     agent_service: AgentService = Depends(Provide[Container.agent_service]),
     profile_repo: AgentProfileRepository = Depends(Provide[Container.agent_profile_repository]),
 ) -> OnboardingStateResponse:
-    agent = await agent_service.get_by_user(current_user.id)
+    agent = await agent_service.get_or_create_agent(current_user.id)
     profile = await profile_repo.get_by_user_id(current_user.id)
 
     answers: list[OnboardingAnswerEntry] = []
@@ -337,7 +337,7 @@ async def update_onboarding_step(
     current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(Provide[Container.agent_service]),
 ) -> dict:
-    agent = await agent_service.get_by_user(current_user.id)
+    agent = await agent_service.get_or_create_agent(current_user.id)
     await agent_service.update_onboarding_step(agent.id, body.step)
     return {"status": "ok"}
 
@@ -359,7 +359,7 @@ async def finish_onboarding(
     agent_service: AgentService = Depends(Provide[Container.agent_service]),
     profile_repo: AgentProfileRepository = Depends(Provide[Container.agent_profile_repository]),
 ) -> AsyncTaskAcceptedResponse:
-    agent = await agent_service.get_by_user(current_user.id)
+    agent = await agent_service.get_or_create_agent(current_user.id)
 
     # Помечаем onboarding как завершённый
     await agent_service.update_onboarding_step(agent.id, ONBOARDING_COMPLETED_STEP)
