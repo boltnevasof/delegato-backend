@@ -7,6 +7,8 @@ from app.api.deps import check_ip_whitelist, get_admin_user, manage_session
 from app.api.v1.schemas.admin import (
     AdminAgentListItem,
     AdminAgentListResponse,
+    AdminAssignTariffRequest,
+    AdminCreateTariffRequest,
     AdminCustomRequestItem,
     AdminCustomRequestListResponse,
     AdminLoginRequest,
@@ -18,20 +20,34 @@ from app.api.v1.schemas.admin import (
     AdminServerStats,
     AdminSupportRequestItem,
     AdminSupportRequestListResponse,
+    AdminTariffListItem,
+    AdminTariffListResponse,
+    AdminTariffResponse,
+    AdminUpdateTariffRequest,
     AdminUpdateUserRequest,
     AdminUpdateUserResponse,
     AdminUserListItem,
     AdminUserListResponse,
+    AdminUserSubscriptionResponse,
 )
 from app.api.v1.schemas.server import ServerLogItem, ServerLogListResponse
-from app.core.constants import CustomRequestStatus, ServerLogLevel, ServerStatus, SupportRequestStatus
+from app.core.constants import (
+    CustomRequestStatus,
+    ServerLogLevel,
+    ServerStatus,
+    SkillAccessLevel,
+    SubscriptionStatus,
+    SupportRequestStatus,
+)
 from app.core.container import Container
 from app.repositories.agent import AgentRepository
 from app.repositories.custom_request import CustomTariffRequestRepository
 from app.repositories.otp import OTPCodeRepository
 from app.repositories.server import ServerRepository
+from app.repositories.subscription import SubscriptionRepository
 from app.repositories.support_request import SupportRequestRepository
 from app.repositories.server_log import ServerLogRepository
+from app.repositories.tariff import TariffRepository
 from app.repositories.user import UserRepository
 from app.services.admin import AdminService
 from app.services.dto.admin import AdminLoginDTO, AdminUpdateUserDTO
@@ -338,4 +354,231 @@ async def list_support_requests(
             for r in items
         ],
         total=total, page=page, per_page=per_page,
+    )
+
+
+# --- Tariff CRUD (JWT + admin role required) ---
+
+
+def _tariff_to_response(t) -> AdminTariffResponse:
+    return AdminTariffResponse(
+        id=t.id,
+        slug=t.slug,
+        name=t.name,
+        price_rub=t.price_rub,
+        max_channels=t.max_channels,
+        llm_model=t.llm_model,
+        skills_access=t.skills_access.value,
+        is_self_service=t.is_self_service,
+        is_active=t.is_active,
+        created_at=t.created_at,
+    )
+
+
+@router.get(
+    "/tariffs",
+    response_model=AdminTariffListResponse,
+    summary="Список тарифов",
+)
+@inject
+@manage_session
+async def list_tariffs(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    tariff_repo: TariffRepository = Depends(
+        Provide[Container.tariff_repository],
+    ),
+) -> AdminTariffListResponse:
+    items, total = await tariff_repo.list_paginated(
+        page, per_page,
+    )
+    return AdminTariffListResponse(
+        items=[
+            AdminTariffListItem(
+                id=t.id,
+                slug=t.slug,
+                name=t.name,
+                price_rub=t.price_rub,
+                max_channels=t.max_channels,
+                llm_model=t.llm_model,
+                skills_access=t.skills_access.value,
+                is_self_service=t.is_self_service,
+                is_active=t.is_active,
+                created_at=t.created_at,
+            )
+            for t in items
+        ],
+        total=total, page=page, per_page=per_page,
+    )
+
+
+@router.post(
+    "/tariffs",
+    status_code=201,
+    response_model=AdminTariffResponse,
+    summary="Создать тариф",
+)
+@inject
+@manage_session
+async def create_tariff(
+    body: AdminCreateTariffRequest,
+    tariff_repo: TariffRepository = Depends(
+        Provide[Container.tariff_repository],
+    ),
+) -> AdminTariffResponse:
+    tariff = await tariff_repo.create(
+        slug=body.slug,
+        name=body.name,
+        price_rub=body.price_rub,
+        max_channels=body.max_channels,
+        llm_model=body.llm_model,
+        skills_access=SkillAccessLevel(body.skills_access),
+        is_self_service=body.is_self_service,
+        is_active=body.is_active,
+    )
+    return _tariff_to_response(tariff)
+
+
+@router.patch(
+    "/tariffs/{tariff_id}",
+    response_model=AdminTariffResponse,
+    summary="Обновить тариф",
+)
+@inject
+@manage_session
+async def update_tariff(
+    tariff_id: uuid.UUID,
+    body: AdminUpdateTariffRequest,
+    tariff_repo: TariffRepository = Depends(
+        Provide[Container.tariff_repository],
+    ),
+) -> AdminTariffResponse:
+    updates = {}
+    for field in (
+        "slug", "name", "price_rub", "max_channels",
+        "llm_model", "is_self_service", "is_active",
+    ):
+        val = getattr(body, field, None)
+        if val is not None:
+            updates[field] = val
+    if body.skills_access is not None:
+        updates["skills_access"] = SkillAccessLevel(
+            body.skills_access,
+        )
+    tariff = await tariff_repo.update(tariff_id, **updates)
+    if tariff is None:
+        from fastapi import HTTPException
+        raise HTTPException(404, "Тариф не найден")
+    return _tariff_to_response(tariff)
+
+
+@router.delete(
+    "/tariffs/{tariff_id}",
+    status_code=204,
+    summary="Удалить тариф",
+)
+@inject
+@manage_session
+async def delete_tariff(
+    tariff_id: uuid.UUID,
+    tariff_repo: TariffRepository = Depends(
+        Provide[Container.tariff_repository],
+    ),
+) -> None:
+    existing = await tariff_repo.get_by_id(tariff_id)
+    if existing is None:
+        from fastapi import HTTPException
+        raise HTTPException(404, "Тариф не найден")
+    await tariff_repo.delete(tariff_id)
+
+
+# --- User subscription / tariff assignment ---
+
+
+@router.get(
+    "/users/{user_id}/subscription",
+    response_model=AdminUserSubscriptionResponse,
+    summary="Подписка пользователя",
+)
+@inject
+@manage_session
+async def get_user_subscription(
+    user_id: uuid.UUID,
+    sub_repo: SubscriptionRepository = Depends(
+        Provide[Container.subscription_repository],
+    ),
+) -> AdminUserSubscriptionResponse:
+    sub = await sub_repo.get_by_user_id(user_id)
+    if sub is None:
+        return AdminUserSubscriptionResponse(
+            subscription_id=None,
+            tariff_plan_id=None,
+            tariff_name=None,
+            status=None,
+        )
+    return AdminUserSubscriptionResponse(
+        subscription_id=sub.id,
+        tariff_plan_id=sub.tariff_plan_id,
+        tariff_name=sub.tariff_plan.name,
+        status=sub.status.value,
+    )
+
+
+@router.post(
+    "/users/{user_id}/assign-tariff",
+    response_model=AdminUserSubscriptionResponse,
+    summary="Назначить тариф пользователю",
+)
+@inject
+@manage_session
+async def assign_tariff_to_user(
+    user_id: uuid.UUID,
+    body: AdminAssignTariffRequest,
+    sub_repo: SubscriptionRepository = Depends(
+        Provide[Container.subscription_repository],
+    ),
+    tariff_repo: TariffRepository = Depends(
+        Provide[Container.tariff_repository],
+    ),
+) -> AdminUserSubscriptionResponse:
+    from datetime import datetime, timedelta, timezone
+
+    tariff = await tariff_repo.get_by_id(body.tariff_plan_id)
+    if tariff is None:
+        from fastapi import HTTPException
+        raise HTTPException(404, "Тариф не найден")
+
+    sub = await sub_repo.get_by_user_id(user_id)
+    now = datetime.now(timezone.utc)
+
+    if sub is None:
+        sub = await sub_repo.create(
+            user_id=user_id,
+            tariff_plan_id=body.tariff_plan_id,
+            status=SubscriptionStatus.ACTIVE,
+            current_period_start=now,
+            current_period_end=now + timedelta(days=30),
+        )
+    else:
+        sub = await sub_repo.update(
+            sub.id,
+            tariff_plan_id=body.tariff_plan_id,
+            status=SubscriptionStatus.ACTIVE,
+        )
+
+    sub = await sub_repo.get_by_user_id(user_id)
+    # Fetch tariff directly to avoid stale relationship
+    fresh_tariff = await tariff_repo.get_by_id(
+        sub.tariff_plan_id,
+    )
+    status_val = (
+        sub.status.value
+        if hasattr(sub.status, "value")
+        else str(sub.status)
+    )
+    return AdminUserSubscriptionResponse(
+        subscription_id=sub.id,
+        tariff_plan_id=sub.tariff_plan_id,
+        tariff_name=fresh_tariff.name if fresh_tariff else None,
+        status=status_val,
     )

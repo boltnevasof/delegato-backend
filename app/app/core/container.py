@@ -5,6 +5,8 @@ from app.db.engine import create_session
 
 # Repositories
 from app.repositories.agent import AgentRepository
+from app.repositories.agent_profile import AgentProfileRepository
+from app.repositories.agent_document import AgentDocumentRepository
 from app.repositories.agent_channel import AgentChannelRepository
 from app.repositories.agent_skill import AgentSkillRepository
 from app.repositories.agent_tool import AgentToolRepository
@@ -81,6 +83,8 @@ class Container(containers.DeclarativeContainer):
     subscription_repository = providers.Singleton(SubscriptionRepository)
     support_request_repository = providers.Singleton(SupportRequestRepository)
     agent_repository = providers.Singleton(AgentRepository)
+    agent_profile_repository = providers.Singleton(AgentProfileRepository)
+    agent_document_repository = providers.Singleton(AgentDocumentRepository)
     payment_repository = providers.Singleton(PaymentRepository)
     custom_request_repository = providers.Singleton(CustomTariffRequestRepository)
     server_repository = providers.Singleton(ServerRepository)

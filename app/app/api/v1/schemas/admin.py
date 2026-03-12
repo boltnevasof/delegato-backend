@@ -151,3 +151,81 @@ class AdminSupportRequestListResponse(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+# --- Tariff CRUD ---
+
+
+class AdminTariffListItem(BaseModel):
+    model_config = ConfigDict(strict=True)
+    id: uuid.UUID
+    slug: str
+    name: str
+    price_rub: int
+    max_channels: int | None
+    llm_model: str | None
+    skills_access: str
+    is_self_service: bool
+    is_active: bool
+    created_at: datetime
+
+
+class AdminTariffListResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+    items: list[AdminTariffListItem]
+    total: int
+    page: int
+    per_page: int
+
+
+class AdminCreateTariffRequest(BaseModel):
+    model_config = ConfigDict(strict=True)
+    slug: str
+    name: str
+    price_rub: int
+    max_channels: int | None = None
+    llm_model: str | None = None
+    skills_access: str = "basic"
+    is_self_service: bool = True
+    is_active: bool = True
+
+
+class AdminUpdateTariffRequest(BaseModel):
+    model_config = ConfigDict(strict=True)
+    slug: str | None = None
+    name: str | None = None
+    price_rub: int | None = None
+    max_channels: int | None = None
+    llm_model: str | None = None
+    skills_access: str | None = None
+    is_self_service: bool | None = None
+    is_active: bool | None = None
+
+
+class AdminTariffResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+    id: uuid.UUID
+    slug: str
+    name: str
+    price_rub: int
+    max_channels: int | None
+    llm_model: str | None
+    skills_access: str
+    is_self_service: bool
+    is_active: bool
+    created_at: datetime
+
+
+# --- User tariff assignment ---
+
+
+class AdminAssignTariffRequest(BaseModel):
+    tariff_plan_id: uuid.UUID
+
+
+class AdminUserSubscriptionResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+    subscription_id: uuid.UUID | None
+    tariff_plan_id: uuid.UUID | None
+    tariff_name: str | None
+    status: str | None
