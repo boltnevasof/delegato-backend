@@ -117,3 +117,32 @@ class AgentAboutResponse(BaseModel):
     agent_md: str | None
     soul_md: str | None
     is_synchronized: bool
+
+
+# ── Onboarding ────────────────────────────────────────────────────────────────
+
+class OnboardingAnswerRequest(BaseModel):
+    """Сохранение ответа на шаге onboarding."""
+    model_config = ConfigDict(strict=True)
+    question_id: str
+    answer: str | None = None
+
+
+class OnboardingAnswerEntry(BaseModel):
+    model_config = ConfigDict(strict=True)
+    question_id: str
+    answer: str | None
+
+
+class OnboardingStateResponse(BaseModel):
+    """Текущее состояние onboarding."""
+    model_config = ConfigDict(strict=True)
+    current_step: int
+    is_completed: bool
+    answers: list[OnboardingAnswerEntry]
+
+
+class OnboardingStepRequest(BaseModel):
+    """Обновление текущего шага onboarding."""
+    model_config = ConfigDict(strict=True)
+    step: int = Field(ge=0, le=6)
